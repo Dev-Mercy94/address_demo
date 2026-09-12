@@ -1,0 +1,10 @@
+{
+  "appId": "com.addresshub.app",
+  "appName": "AddressHub",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  }
+}

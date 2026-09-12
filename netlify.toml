@@ -1,0 +1,94 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+[[redirects]]
+  from = "/api/addresses"
+  to = "/.netlify/functions/addresses"
+  status = 200
+
+[[redirects]]
+  from = "/api/address"
+  to = "/.netlify/functions/address"
+  status = 200
+
+[[redirects]]
+  from = "/api/create-address"
+  to = "/.netlify/functions/create_address"
+  status = 200
+
+[[redirects]]
+  from = "/api/update-address"
+  to = "/.netlify/functions/update_address"
+  status = 200
+
+[[redirects]]
+  from = "/api/delete-address"
+  to = "/.netlify/functions/delete_address"
+  status = 200
+
+[[redirects]]
+  from = "/api/stats"
+  to = "/.netlify/functions/stats"
+  status = 200
+
+[[redirects]]
+  from = "/api/districts"
+  to = "/.netlify/functions/districts"
+  status = 200
+
+[[redirects]]
+  from = "/api/pincodes"
+  to = "/.netlify/functions/pincodes"
+  status = 200
+
+[[redirects]]
+  from = "/api/addresses/check-duplicate"
+  to = "/.netlify/functions/check_duplicate"
+  status = 200
+
+[[redirects]]
+  from = "/api/import"
+  to = "/.netlify/functions/import_addresses"
+  status = 200
+
+[[redirects]]
+  from = "/api/seed"
+  to = "/.netlify/functions/seed"
+  status = 200
+
+[[redirects]]
+  from = "/api/important-dates"
+  to = "/.netlify/functions/important_dates"
+  status = 200
+
+[[redirects]]
+  from = "/api/important_dates"
+  to = "/.netlify/functions/important_dates"
+  status = 200
+
+[[redirects]]
+  from = "/.netlify/functions/important-dates"
+  to = "/.netlify/functions/important_dates"
+  status = 200
+
+[[redirects]]
+  from = "/.netlify/functions/create-address"
+  to = "/.netlify/functions/create_address"
+  status = 200
+
+[[redirects]]
+  from = "/.netlify/functions/update-address"
+  to = "/.netlify/functions/update_address"
+  status = 200
+
+[[redirects]]
+  from = "/.netlify/functions/delete-address"
+  to = "/.netlify/functions/delete_address"
+  status = 200
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
