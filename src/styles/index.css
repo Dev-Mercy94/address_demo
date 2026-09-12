@@ -3422,3 +3422,15 @@ h6 {
     justify-content: center;
   }
 }
+
+/* Hide Netlify Drawer & Promotional Watermarks */
+#netlify-drawer,
+[data-netlify-drawer],
+.netlify-badge,
+iframe[src*="netlify"],
+netlify-drawer {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
