@@ -3,11 +3,18 @@
   publish = "dist"
   functions = "netlify/functions"
 
-[build.environment]
-  PYTHON_VERSION = "3.11"
-
 [functions]
   directory = "netlify/functions"
+
+[[redirects]]
+  from = "/api/login"
+  to = "/.netlify/functions/login"
+  status = 200
+
+[[redirects]]
+  from = "/api/users"
+  to = "/.netlify/functions/users"
+  status = 200
 
 [[redirects]]
   from = "/api/addresses"
@@ -25,12 +32,27 @@
   status = 200
 
 [[redirects]]
+  from = "/api/create_address"
+  to = "/.netlify/functions/create_address"
+  status = 200
+
+[[redirects]]
   from = "/api/update-address"
   to = "/.netlify/functions/update_address"
   status = 200
 
 [[redirects]]
+  from = "/api/update_address"
+  to = "/.netlify/functions/update_address"
+  status = 200
+
+[[redirects]]
   from = "/api/delete-address"
+  to = "/.netlify/functions/delete_address"
+  status = 200
+
+[[redirects]]
+  from = "/api/delete_address"
   to = "/.netlify/functions/delete_address"
   status = 200
 
@@ -50,12 +72,22 @@
   status = 200
 
 [[redirects]]
+  from = "/api/check-duplicate"
+  to = "/.netlify/functions/check_duplicate"
+  status = 200
+
+[[redirects]]
   from = "/api/addresses/check-duplicate"
   to = "/.netlify/functions/check_duplicate"
   status = 200
 
 [[redirects]]
   from = "/api/import"
+  to = "/.netlify/functions/import_addresses"
+  status = 200
+
+[[redirects]]
+  from = "/api/import_addresses"
   to = "/.netlify/functions/import_addresses"
   status = 200
 
@@ -72,26 +104,6 @@
 [[redirects]]
   from = "/api/important_dates"
   to = "/.netlify/functions/important_dates"
-  status = 200
-
-[[redirects]]
-  from = "/.netlify/functions/important-dates"
-  to = "/.netlify/functions/important_dates"
-  status = 200
-
-[[redirects]]
-  from = "/.netlify/functions/create-address"
-  to = "/.netlify/functions/create_address"
-  status = 200
-
-[[redirects]]
-  from = "/.netlify/functions/update-address"
-  to = "/.netlify/functions/update_address"
-  status = 200
-
-[[redirects]]
-  from = "/.netlify/functions/delete-address"
-  to = "/.netlify/functions/delete_address"
   status = 200
 
 [[redirects]]
