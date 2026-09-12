@@ -3,6 +3,12 @@
   publish = "dist"
   functions = "netlify/functions"
 
+[build.environment]
+  PYTHON_VERSION = "3.11"
+
+[functions]
+  directory = "netlify/functions"
+
 [[redirects]]
   from = "/api/addresses"
   to = "/.netlify/functions/addresses"
