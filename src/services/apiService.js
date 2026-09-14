@@ -61,6 +61,17 @@ export async function checkDuplicateAddress(addressData) {
   return res.json();
 }
 
+export async function batchCheckDuplicateAddresses(items) {
+  const cleanItems = sanitizeObject(items);
+  const res = await fetch(`${API_BASE}/check-duplicate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ items: cleanItems })
+  });
+  if (!res.ok) throw new Error('Failed to batch check duplicates');
+  return res.json();
+}
+
 export async function createAddress(addressData) {
   const cleanData = sanitizeObject(addressData);
   const res = await fetch(`${API_BASE}/create-address`, {

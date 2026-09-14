@@ -1,11 +1,37 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Papa from 'papaparse';
-import { batchImportAddresses, updateAddress, checkDuplicateAddress } from '../services/apiService';
-import { parsePdfOrDocumentAddresses, convertBaminiToUnicode } from '../utils/pdfHelper';
+import { batchImportAddresses, updateAddress, checkDuplicateAddress, batchCheckDuplicateAddresses } from '../services/apiService';
+import { parsePdfOrDocumentAddresses, convertBaminiToUnicode, stripDistrictFromAddressLine } from '../utils/pdfHelper';
 import { Upload, FileSpreadsheet, FileText, CheckCircle2, AlertCircle, Eye, Trash2, Edit3, ArrowRight, Copy, Check } from 'lucide-react';
 import { Toast } from '../components/Toast';
 import { PageLoader } from '../components/PageLoader';
 import { DuplicateModal } from '../components/DuplicateModal';
+
+// Helper to validate and format U.Id (e.g. T-0001, M-0001). Rejects digit prefixes like 5-0271, 9-8659
+function sanitizeUId(rawUid) {
+  if (!rawUid || typeof rawUid !== 'string') return '';
+  const clean = rawUid.trim();
+  if (/^[A-Za-z]-\d{1,6}$/i.test(clean)) {
+    const parts = clean.split('-');
+    return `${parts[0].toUpperCase()}-${parts[1].padStart(4, '0')}`;
+  }
+  return '';
+}
+
+// Helper to validate that Pincode is strictly 6 digits
+function sanitizePincode(rawPin, district = 'Tenkasi') {
+  const defaultPin = district === 'Thoothukudi' ? '628303' : 
+                     (district === 'Madurai' ? '625014' : 
+                     (district === 'Coimbatore' ? '641001' : 
+                     (district === 'Chennai' ? '600001' : '627811')));
+  if (!rawPin) return defaultPin;
+  const clean = String(rawPin).replace(/\D/g, '');
+  if (clean.length === 6) {
+    if (clean.startsWith('6')) return clean;
+    if (!clean.startsWith('10') && !clean.startsWith('11')) return clean;
+  }
+  return defaultPin;
+}
 
 // Memoized preview table row to eliminate re-renders on keystroke (100% instant typing)
 const PreviewTableRow = React.memo(function PreviewTableRow({
@@ -183,12 +209,21 @@ export function ImportPage({ onNavigate, onStatsChange }) {
 
     try {
       if (isPdfOrDocOrImage) {
+        const isImg = selectedFile.type?.startsWith('image/') || /\.(png|jpe?g|webp|bmp)$/i.test(selectedFile.name);
+        if (isImg) {
+          setToast({ message: 'Processing image via AI OCR... (Note: Uploading the original PDF directly is instant and 100% accurate!)', type: 'info' });
+        }
         const extracted = await parsePdfOrDocumentAddresses(selectedFile);
         if (extracted.length === 0) {
           setToast({ message: 'No valid addresses could be extracted from document or image.', type: 'warning' });
         } else {
-          setPreviewItems(extracted);
-          setToast({ message: `Extracted ${extracted.length} address records for preview!`, type: 'info' });
+          const sanitized = extracted.map(item => ({
+            ...item,
+            u_id: sanitizeUId(item.u_id),
+            pincode: sanitizePincode(item.pincode, item.district)
+          }));
+          setPreviewItems(sanitized);
+          setToast({ message: `Extracted ${sanitized.length} address records for preview!`, type: 'info' });
         }
       } else {
         // CSV Parsing
@@ -198,17 +233,19 @@ export function ImportPage({ onNavigate, onStatsChange }) {
           complete: (results) => {
             const rows = results.data || [];
             const parsed = rows.map(r => ({
-              u_id: (r['U.Id'] || r.u_id || r.code || '').trim(),
-              name: convertBaminiToUnicode((r.Name || r.name || 'Contact Name').trim()),
-              door_no: convertBaminiToUnicode((r['Door No'] || r.door_no || '').trim()),
-              address_line_1: convertBaminiToUnicode((r['Address Line 1'] || r.Address || r.address_line_1 || 'Address Line').trim()),
+              u_id: sanitizeUId(r['U.Id'] || r.u_id || r.code || ''),
+              name: (r.Name || r.name) ? convertBaminiToUnicode((r.Name || r.name).trim()) : 'Contact Name',
+              door_no: (r['Door No'] || r.door_no) ? convertBaminiToUnicode((r['Door No'] || r.door_no).trim()) : '',
+              address_line_1: (r['Address Line 1'] || r.Address || r.address_line_1) 
+                ? stripDistrictFromAddressLine(convertBaminiToUnicode((r['Address Line 1'] || r.Address || r.address_line_1).trim()), r.District || r.district)
+                : 'Address Line',
               address_line_2: convertBaminiToUnicode((r['Address Line 2'] || r.address_line_2 || '').trim()),
               area: convertBaminiToUnicode((r.Area || r.City || r.area || 'Coimbatore').trim()),
               city: convertBaminiToUnicode((r.City || r.city || 'Coimbatore').trim()),
               district: convertBaminiToUnicode((r.District || r.district || 'Coimbatore').trim()),
               state: convertBaminiToUnicode((r.State || r.state || 'Tamil Nadu').trim()),
               country: (r.Country || r.country || 'India').trim(),
-              pincode: (r.Pincode || r.pincode || '641001').trim(),
+              pincode: sanitizePincode(r.Pincode || r.pincode, r.District || r.district),
               phone: (r.Phone || r.phone || '').trim(),
               landmark: convertBaminiToUnicode((r.Landmark || r.landmark || '').trim()),
               notes: `Imported from ${selectedFile.name}`
@@ -250,8 +287,13 @@ export function ImportPage({ onNavigate, onStatsChange }) {
       if (extracted.length === 0) {
         setToast({ message: 'No valid addresses could be extracted from text.', type: 'warning' });
       } else {
-        setPreviewItems(extracted);
-        setToast({ message: `Parsed ${extracted.length} unstructured address records!`, type: 'info' });
+        const sanitized = extracted.map(item => ({
+          ...item,
+          u_id: sanitizeUId(item.u_id),
+          pincode: sanitizePincode(item.pincode, item.district)
+        }));
+        setPreviewItems(sanitized);
+        setToast({ message: `Parsed ${sanitized.length} unstructured address records!`, type: 'info' });
       }
     } catch (err) {
       console.error('Text parsing error:', err);
@@ -356,28 +398,33 @@ export function ImportPage({ onNavigate, onStatsChange }) {
         candidateItems.push(item);
       }
 
-      // 2. High-speed parallel concurrent checking against database (batches of 20)
-      const batchSize = 20;
+      // 2. High-speed bulk checking against database
+      const batchSize = 1000;
       for (let i = 0; i < candidateItems.length; i += batchSize) {
         const chunk = candidateItems.slice(i, i + batchSize);
-        await Promise.all(
-          chunk.map(async (item) => {
-            try {
-              const res = await checkDuplicateAddress(item);
-              if (res && res.duplicateFound && res.existingAddress) {
-                dups.push({
-                  importedItem: { ...item },
-                  existingAddress: res.existingAddress
-                });
-                return;
-              }
-            } catch (e) {
-              console.warn('Duplicate check skipped for item:', e);
+        try {
+          const res = await batchCheckDuplicateAddresses(chunk);
+          if (res && res.duplicates && res.duplicates.length > 0) {
+            for (const dup of res.duplicates) {
+              dups.push(dup);
             }
-
-            staged.push({ ...item });
-          })
-        );
+          }
+          
+          // Now add everything that wasn't a duplicate to staged
+          for (const item of chunk) {
+             const isDup = res?.duplicates?.find(d => 
+                 (d.importedItem.name === item.name && d.importedItem.phone === item.phone) ||
+                 (item.u_id && d.importedItem.u_id === item.u_id)
+             );
+             if (!isDup) {
+               staged.push({ ...item });
+             }
+          }
+        } catch (e) {
+          console.error('Batch duplicate check failed:', e);
+          // Fallback if bulk fails? Just stage them to avoid blocking
+          for (const item of chunk) staged.push({ ...item });
+        }
       }
 
       setStagedSuccessList(staged);
@@ -1056,53 +1103,7 @@ export function ImportPage({ onNavigate, onStatsChange }) {
               </div>
             </div>
 
-            {/* If No Duplicates Found: Informative Unique Banner & View Staged Cards */}
-            {duplicateDetails.length === 0 && stagedSuccessList.length > 0 && (
-              <div style={{
-                padding: '1.15rem 1.25rem',
-                backgroundColor: '#f0fdf4',
-                border: '1px solid #86efac',
-                borderRadius: '0.75rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '0.875rem',
-                marginBottom: '1rem'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <div style={{
-                    width: '38px',
-                    height: '38px',
-                    borderRadius: '50%',
-                    backgroundColor: '#dcfce7',
-                    color: '#16a34a',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0
-                  }}>
-                    <CheckCircle2 size={22} />
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '0.95rem', color: '#166534', fontWeight: 700 }}>
-                      ✨ All {stagedSuccessList.length} Extracted Addresses are Unique!
-                    </div>
-                    <div style={{ fontSize: '0.8rem', color: '#15803d' }}>
-                      No duplicates detected in dataset or file. All {stagedSuccessList.length} records in Success are ready to save.
-                    </div>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => setShowStagedSuccessCards(!showStagedSuccessCards)}
-                  className="btn btn-secondary btn-sm"
-                  style={{ borderColor: '#86efac', color: '#166534', backgroundColor: '#ffffff', fontWeight: 600 }}
-                >
-                  <Eye size={14} /> {showStagedSuccessCards ? 'Hide Staged Cards' : `View All (${stagedSuccessList.length}) Staged Cards`}
-                </button>
-              </div>
-            )}
+            {/* If No Duplicates Found: Informative Unique Banner & View Staged Cards (Removed per user request) */}
 
             {/* Staged Unique Address Cards (Collapsible View) */}
             {showStagedSuccessCards && stagedSuccessList.length > 0 && (() => {

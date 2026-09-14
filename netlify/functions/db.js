@@ -26,6 +26,17 @@ export function jsonResponse(statusCode, data) {
   };
 }
 
+export function serializeDoc(doc) {
+  if (!doc) return null;
+  const newDoc = { ...doc };
+  if (newDoc._id) newDoc._id = newDoc._id.toString();
+  return newDoc;
+}
+
+export function escapeRegex(text) {
+  return (text || '').replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+}
+
 export async function getDb() {
   const uri = process.env.MONGODB_URI;
   const dbName = process.env.MONGODB_DATABASE || process.env.MONGODB_DB_NAME || 'address_management_db';

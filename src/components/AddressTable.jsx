@@ -8,8 +8,6 @@ const AddressTableRow = memo(function AddressTableRow({
   limit,
   isEditing,
   isSaving,
-  editFormData,
-  onEditChange,
   onStartInlineEdit,
   onCancelInlineEdit,
   onSaveInline,
@@ -18,6 +16,22 @@ const AddressTableRow = memo(function AddressTableRow({
   onDelete,
   onSubscriptionToggle
 }) {
+  const [localFormData, setLocalFormData] = useState({});
+
+  React.useEffect(() => {
+    if (isEditing) {
+      setLocalFormData({
+        name: addr.name || '',
+        phone: addr.phone || '',
+        pincode: addr.pincode || '',
+        district: addr.district || '',
+        city: addr.city || ''
+      });
+    }
+  }, [isEditing, addr]);
+
+  const onEditChange = (field, val) => setLocalFormData(prev => ({ ...prev, [field]: val }));
+
   const serialNo = (page - 1) * limit + index + 1;
 
   const fullAddressText = [
@@ -55,7 +69,7 @@ const AddressTableRow = memo(function AddressTableRow({
         {isEditing ? (
           <input
             type="text"
-            value={editFormData.name || ''}
+            value={localFormData.name || ''}
             onChange={(e) => onEditChange('name', e.target.value)}
             className="form-input"
             style={{ padding: '0.25rem 0.5rem', height: '32px' }}
@@ -80,7 +94,7 @@ const AddressTableRow = memo(function AddressTableRow({
         {isEditing ? (
           <input
             type="text"
-            value={editFormData.city || ''}
+            value={localFormData.city || ''}
             onChange={(e) => onEditChange('city', e.target.value)}
             className="form-input"
             style={{ padding: '0.25rem 0.5rem', height: '32px' }}
@@ -95,7 +109,7 @@ const AddressTableRow = memo(function AddressTableRow({
         {isEditing ? (
           <input
             type="text"
-            value={editFormData.district || ''}
+            value={localFormData.district || ''}
             onChange={(e) => onEditChange('district', e.target.value)}
             className="form-input"
             style={{ padding: '0.25rem 0.5rem', height: '32px' }}
@@ -117,7 +131,7 @@ const AddressTableRow = memo(function AddressTableRow({
         {isEditing ? (
           <input
             type="text"
-            value={editFormData.pincode || ''}
+            value={localFormData.pincode || ''}
             onChange={(e) => onEditChange('pincode', e.target.value)}
             className="form-input"
             style={{ padding: '0.25rem 0.5rem', height: '32px', width: '90px' }}
@@ -132,7 +146,7 @@ const AddressTableRow = memo(function AddressTableRow({
         {isEditing ? (
           <input
             type="text"
-            value={editFormData.phone || ''}
+            value={localFormData.phone || ''}
             onChange={(e) => onEditChange('phone', e.target.value)}
             className="form-input"
             style={{ padding: '0.25rem 0.5rem', height: '32px', width: '120px' }}
@@ -166,7 +180,7 @@ const AddressTableRow = memo(function AddressTableRow({
         {isEditing ? (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
             <button
-              onClick={() => onSaveInline(addr._id)}
+              onClick={() => onSaveInline(addr._id, localFormData)}
               disabled={isSaving}
               className="btn btn-sm"
               style={{ backgroundColor: 'var(--success)', color: '#ffffff', padding: '0.25rem 0.5rem' }}
@@ -235,41 +249,27 @@ export function AddressTable({
   onInlineSave
 }) {
   const [editingId, setEditingId] = useState(null);
-  const [editFormData, setEditFormData] = useState({});
   const [savingInlineId, setSavingInlineId] = useState(null);
 
   const startInlineEdit = useCallback((address) => {
     setEditingId(address._id);
-    setEditFormData({
-      name: address.name || '',
-      phone: address.phone || '',
-      pincode: address.pincode || '',
-      district: address.district || '',
-      city: address.city || ''
-    });
   }, []);
 
   const cancelInlineEdit = useCallback(() => {
     setEditingId(null);
-    setEditFormData({});
   }, []);
 
-  const handleEditChange = useCallback((field, value) => {
-    setEditFormData(prev => ({ ...prev, [field]: value }));
-  }, []);
-
-  const handleSaveInline = useCallback(async (id) => {
+  const handleSaveInline = useCallback(async (id, formData) => {
     setSavingInlineId(id);
     try {
-      await onInlineSave(id, editFormData);
+      await onInlineSave(id, formData);
       setEditingId(null);
-      setEditFormData({});
     } catch (error) {
       console.error('Inline save failed:', error);
     } finally {
       setSavingInlineId(null);
     }
-  }, [onInlineSave, editFormData]);
+  }, [onInlineSave]);
 
   const handleSubscriptionToggle = useCallback(async (addr, checked) => {
     if (onInlineSave) {
@@ -390,8 +390,6 @@ export function AddressTable({
               limit={limit}
               isEditing={editingId === addr._id}
               isSaving={savingInlineId === addr._id}
-              editFormData={editFormData}
-              onEditChange={handleEditChange}
               onStartInlineEdit={startInlineEdit}
               onCancelInlineEdit={cancelInlineEdit}
               onSaveInline={handleSaveInline}

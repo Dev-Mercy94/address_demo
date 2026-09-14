@@ -1,58 +1,99 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { spawn } from 'child_process';
+import dotenv from 'dotenv';
+import path from 'path';
 
-let persistentDevServerProc = null;
+dotenv.config();
 
 export default defineConfig({
   plugins: [
     react(),
     {
-      name: 'persistent-python-api-server',
+      name: 'netlify-functions-dev-middleware',
       configureServer(server) {
-        const PORT = 5055;
-        try {
-          persistentDevServerProc = spawn('python', ['scripts/dev_server.py', String(PORT)], {
-            cwd: process.cwd(),
-            env: { ...process.env },
-            stdio: ['ignore', 'ignore', 'inherit']
-          });
+        server.middlewares.use(async (req, res, next) => {
+          if (!req.url.startsWith('/.netlify/functions/') && !req.url.startsWith('/api/')) {
+            return next();
+          }
 
-          persistentDevServerProc.on('error', (err) => {
-            console.warn('[vite] Could not start persistent Python dev server:', err.message);
-          });
+          try {
+            const urlObj = new URL(req.url, `http://${req.headers.host || 'localhost:3000'}`);
+            let rawPath = urlObj.pathname;
+            let funcName = rawPath
+              .replace('/.netlify/functions/', '')
+              .replace('/api/', '')
+              .replace('/api', '')
+              .trim()
+              .split('/')[0] || 'addresses';
 
-          const cleanup = () => {
-            if (persistentDevServerProc) {
-              persistentDevServerProc.kill();
-              persistentDevServerProc = null;
+            let targetFile = `${funcName}.js`;
+            if (funcName === 'import') targetFile = 'import_addresses.js';
+            if (funcName === 'check-duplicate') targetFile = 'check_duplicate.js';
+            if (funcName === 'create-address') targetFile = 'create_address.js';
+            if (funcName === 'update-address') targetFile = 'update_address.js';
+            if (funcName === 'delete-address') targetFile = 'delete_address.js';
+            if (funcName === 'important-dates') targetFile = 'important_dates.js';
+
+            const filePath = path.resolve(process.cwd(), 'netlify/functions', targetFile);
+
+            // Read POST/PUT request body
+            const buffers = [];
+            for await (const chunk of req) {
+              buffers.push(chunk);
             }
-          };
+            const bodyStr = Buffer.concat(buffers).toString('utf-8');
 
-          process.on('exit', cleanup);
-          process.on('SIGINT', () => { cleanup(); process.exit(); });
-          process.on('SIGTERM', () => { cleanup(); process.exit(); });
-        } catch (e) {
-          console.warn('[vite] Error spawning python dev_server:', e);
-        }
+            const queryParams = {};
+            urlObj.searchParams.forEach((v, k) => {
+              queryParams[k] = v;
+            });
+
+            const event = {
+              httpMethod: req.method,
+              path: rawPath,
+              queryStringParameters: queryParams,
+              headers: req.headers,
+              body: bodyStr
+            };
+
+            const mod = await server.ssrLoadModule(filePath);
+
+            if (!mod || !mod.handler) {
+              res.statusCode = 404;
+              res.setHeader('Content-Type', 'application/json');
+              res.setHeader('Access-Control-Allow-Origin', '*');
+              res.end(JSON.stringify({ error: `Function ${funcName} not found` }));
+              return;
+            }
+
+            const result = await mod.handler(event, {});
+            const statusCode = result.statusCode || 200;
+            const headers = result.headers || {};
+            const responseBody = result.body || '';
+
+            res.statusCode = statusCode;
+            for (const [k, v] of Object.entries(headers)) {
+              res.setHeader(k, v);
+            }
+            if (!res.getHeader('Access-Control-Allow-Origin')) {
+              res.setHeader('Access-Control-Allow-Origin', '*');
+            }
+
+            res.end(typeof responseBody === 'string' ? responseBody : JSON.stringify(responseBody));
+          } catch (err) {
+            console.error('[Netlify Dev Middleware Error]:', err);
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.end(JSON.stringify({ error: err.message || 'Internal Dev Server Error' }));
+          }
+        });
       }
     }
   ],
   server: {
     port: 3000,
-    open: true,
-    proxy: {
-      '/.netlify/functions': {
-        target: 'http://127.0.0.1:5055',
-        changeOrigin: true,
-        timeout: 10000
-      },
-      '/api': {
-        target: 'http://127.0.0.1:5055',
-        changeOrigin: true,
-        timeout: 10000
-      }
-    }
+    open: true
   },
   build: {
     target: 'esnext',

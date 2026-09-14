@@ -39,25 +39,159 @@ export async function preprocessImageForTamilOCR(imageFile) {
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const scale = Math.max(1.5, Math.min(2.5, 2000 / Math.max(img.width, img.height)));
-      canvas.width = Math.round(img.width * scale);
-      canvas.height = Math.round(img.height * scale);
-      
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const d = imgData.data;
-      
-      for (let i = 0; i < d.length; i += 4) {
-        const gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
-        const v = gray > 140 ? 255 : (gray < 70 ? 0 : gray);
-        d[i] = v;
-        d[i + 1] = v;
-        d[i + 2] = v;
+      // 1. Create native resolution canvas to detect document bounds
+      const detectCanvas = document.createElement('canvas');
+      detectCanvas.width = img.width;
+      detectCanvas.height = img.height;
+      const detectCtx = detectCanvas.getContext('2d');
+      detectCtx.drawImage(img, 0, 0);
+
+      let cropX = 0, cropY = 0, cropW = img.width, cropH = img.height;
+
+      // Sample pixels to find bright white document bounding box (excluding dark viewer borders in screenshots)
+      try {
+        const imgData = detectCtx.getImageData(0, 0, img.width, img.height);
+        const d = imgData.data;
+
+        let minY = 0, maxY = img.height - 1;
+        const rowStep = Math.max(1, Math.floor(img.height / 300));
+        const colStep = Math.max(1, Math.floor(img.width / 200));
+
+        for (let y = 0; y < img.height; y += rowStep) {
+          let brightCount = 0;
+          let totalCount = 0;
+          for (let x = 0; x < img.width; x += colStep) {
+            const idx = (y * img.width + x) * 4;
+            const gray = 0.299 * d[idx] + 0.587 * d[idx + 1] + 0.114 * d[idx + 2];
+            if (gray > 160) brightCount++;
+            totalCount++;
+          }
+          if (brightCount / totalCount > 0.35) {
+            minY = y;
+            break;
+          }
+        }
+
+        for (let y = img.height - 1; y >= 0; y -= rowStep) {
+          let brightCount = 0;
+          let totalCount = 0;
+          for (let x = 0; x < img.width; x += colStep) {
+            const idx = (y * img.width + x) * 4;
+            const gray = 0.299 * d[idx] + 0.587 * d[idx + 1] + 0.114 * d[idx + 2];
+            if (gray > 160) brightCount++;
+            totalCount++;
+          }
+          if (brightCount / totalCount > 0.35) {
+            maxY = y;
+            break;
+          }
+        }
+
+        let minX = 0, maxX = img.width - 1;
+        for (let x = 0; x < img.width; x += colStep) {
+          let brightCount = 0;
+          let totalCount = 0;
+          for (let y = minY; y <= maxY; y += rowStep * 2) {
+            const idx = (y * img.width + x) * 4;
+            const gray = 0.299 * d[idx] + 0.587 * d[idx + 1] + 0.114 * d[idx + 2];
+            if (gray > 160) brightCount++;
+            totalCount++;
+          }
+          if (brightCount / totalCount > 0.35) {
+            minX = x;
+            break;
+          }
+        }
+
+        for (let x = img.width - 1; x >= 0; x -= colStep) {
+          let brightCount = 0;
+          let totalCount = 0;
+          for (let y = minY; y <= maxY; y += rowStep * 2) {
+            const idx = (y * img.width + x) * 4;
+            const gray = 0.299 * d[idx] + 0.587 * d[idx + 1] + 0.114 * d[idx + 2];
+            if (gray > 160) brightCount++;
+            totalCount++;
+          }
+          if (brightCount / totalCount > 0.35) {
+            maxX = x;
+            break;
+          }
+        }
+
+        if (maxX > minX + 200 && maxY > minY + 200) {
+          cropX = minX;
+          cropY = minY;
+          cropW = maxX - minX;
+          cropH = maxY - minY;
+        }
+      } catch (e) {
+        console.warn('Auto-crop detection warning:', e);
       }
-      ctx.putImageData(imgData, 0, 0);
-      resolve(canvas);
+
+      // Check if this document image is a multi-column directory page (portrait orientation with height > 1.15 * width)
+      const isMultiColumnSheet = cropH > cropW * 1.15 && cropW >= 300;
+
+      if (isMultiColumnSheet) {
+        // Slice into 4 distinct vertical column canvases (skipping top 4% document page header like "Sanju Typed ... 1")
+        const columns = [];
+        const numCols = 4;
+        const colWidthFraction = 1.0 / numCols;
+        const startY = cropY + cropH * 0.04;
+        const colHeight = cropH * 0.95;
+
+        for (let c = 0; c < numCols; c++) {
+          const colCanvas = document.createElement('canvas');
+          const colCtx = colCanvas.getContext('2d');
+          const colX = cropX + cropW * (c * colWidthFraction);
+          const colW = cropW * colWidthFraction;
+
+          const scale = Math.max(1.8, Math.min(3.0, 1500 / colW));
+          colCanvas.width = Math.round(colW * scale);
+          colCanvas.height = Math.round(colHeight * scale);
+
+          colCtx.drawImage(
+            img,
+            colX, startY, colW, colHeight,
+            0, 0, colCanvas.width, colCanvas.height
+          );
+
+          // Binarize column image for crisp OCR recognition
+          const cData = colCtx.getImageData(0, 0, colCanvas.width, colCanvas.height);
+          const cd = cData.data;
+          for (let i = 0; i < cd.length; i += 4) {
+            const gray = 0.299 * cd[i] + 0.587 * cd[i + 1] + 0.114 * cd[i + 2];
+            const v = gray > 145 ? 255 : (gray < 75 ? 0 : gray);
+            cd[i] = v;
+            cd[i + 1] = v;
+            cd[i + 2] = v;
+          }
+          colCtx.putImageData(cData, 0, 0);
+          columns.push(colCanvas);
+        }
+
+        resolve({ isColumns: true, columns });
+      } else {
+        // Single cropped canvas for general images
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const scale = Math.max(1.5, Math.min(2.5, 2000 / Math.max(cropW, cropH)));
+        canvas.width = Math.round(cropW * scale);
+        canvas.height = Math.round(cropH * scale);
+
+        ctx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, canvas.width, canvas.height);
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const d = imgData.data;
+
+        for (let i = 0; i < d.length; i += 4) {
+          const gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+          const v = gray > 140 ? 255 : (gray < 70 ? 0 : gray);
+          d[i] = v;
+          d[i + 1] = v;
+          d[i + 2] = v;
+        }
+        ctx.putImageData(imgData, 0, 0);
+        resolve({ isColumns: false, canvas });
+      }
     };
     img.onerror = reject;
     if (typeof imageFile === 'string') {
@@ -171,8 +305,8 @@ export function convertBaminiToUnicode(text) {
 
   let str = text;
 
-  // 1. Protect Card IDs (e.g. T-0001, T-0163, T-0354)
-  str = protect(str, /\b(?:T|t|I|1)[-\s\.\:—_–~]?\s*0*\d{2,5}\b/g);
+  // 1. Protect Card IDs (e.g. T-0001, M-0001, A-0001, ஆ-0001, etc. Must strictly start with an alphabet letter)
+  str = protect(str, /(?:^|[\s\n\r\t,;\(\)\{\}\[\]•·\-\–—])(?:[A-Za-z]|ஆ)[-\s\.\:—_–~]?\s*0*\d{1,5}\b/g);
 
   // 2. Protect Relationship Prefixes (S/o, W/o, D/o, C/o) while preserving newlines & spacing
   str = protect(str, /(^|[\r\n\s,;\(])(S|W|D|C)\s*[\/\.]\s*o\b[\.\:]?/gim, (m, lead, rel) => {
@@ -521,13 +655,52 @@ export function convertBaminiToUnicode(text) {
   return str.replace(/[ \t]+/g, ' ').trim();
 }
 
+export function stripDistrictFromAddressLine(addressStr, detectedDistrict = '') {
+  if (!addressStr || typeof addressStr !== 'string') return '';
+  let str = addressStr;
+
+  const targetTerms = new Set();
+  if (detectedDistrict) {
+    targetTerms.add(detectedDistrict);
+    for (const [tName, engName] of Object.entries(TAMIL_DISTRICT_MAP)) {
+      if (engName.toLowerCase() === detectedDistrict.toLowerCase()) {
+        targetTerms.add(tName);
+      }
+    }
+  }
+
+  for (const d of DISTRICTS_LIST) targetTerms.add(d);
+  for (const tName of Object.keys(TAMIL_DISTRICT_MAP)) targetTerms.add(tName);
+
+  for (const term of targetTerms) {
+    if (!term || term.length < 2) continue;
+    const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // Notice: Do NOT use \b because Unicode/Tamil characters are non-word (\W) characters in JavaScript regex.
+    // Use (?:^|[\s,;/\-]+) for start boundary and (?=$|[\s,;/\-\.]+) for end boundary,
+    // with negative lookahead to preserve road/street names like 'மதுரை ரோடு' (Madurai Road).
+    const pattern = new RegExp(
+      '(?:^|[\\s,;\\/\\-]+)' + escaped + '(?:\\s*(?:Dt|District|மாவட்டம்|மாநிலம்))?\\.?' +
+      '(?![\\s\\-]*(?:ரோடு|சாலை|தெரு|நகர்|வீதி|சந்து|லேன்|Road|Street|Nagar|Salai|Lane|Avenue|St|Rd))' +
+      '(?=$|[\\s,;\\/\\-\\.]+)',
+      'gi'
+    );
+    str = str.replace(pattern, ' ');
+  }
+
+  return str
+    .replace(/\s+,\s+/g, ', ')
+    .replace(/,+/g, ',')
+    .replace(/^[,;\s\.\/\-]+|[,;\s\.\/\-]+$/g, '')
+    .trim();
+}
+
 function deMashHorizontalGridText(fullText) {
   if (!fullText) return fullText;
   const lines = fullText.split('\n').map(l => l.trim()).filter(Boolean);
 
   let multiHeaderLinesCount = 0;
   for (const l of lines) {
-    const matches = l.match(/\b[MTmtI1][-\s]?\d{1,5}\b/gi);
+    const matches = l.match(/\b(?:[A-Za-z]|ஆ)[-\s]?\d{1,5}\b/gi);
     if (matches && matches.length >= 2) {
       multiHeaderLinesCount++;
     }
@@ -540,8 +713,8 @@ function deMashHorizontalGridText(fullText) {
   for (const l of lines) {
     let parts = l.split(/\s{2,}|\t/).map(p => p.trim()).filter(Boolean);
     
-    if (parts.length <= 1 && (l.match(/\b[MTmtI1][-\s]?\d{1,5}\b/gi) || []).length >= 2) {
-      parts = l.split(/(?=\b[MTmtI1][-\s]?\d{1,5}\b)/i).map(p => p.trim()).filter(Boolean);
+    if (parts.length <= 1 && (l.match(/\b(?:[A-Za-z]|ஆ)[-\s]?\d{1,5}\b/gi) || []).length >= 2) {
+      parts = l.split(/(?=\b(?:[A-Za-z]|ஆ)[-\s]?\d{1,5}\b)/i).map(p => p.trim()).filter(Boolean);
     }
 
     if (parts.length === 0) continue;
@@ -584,7 +757,7 @@ function extractTextFromOcrWordsByColumns(data) {
 
   const cardHeaderX = [];
   for (const w of validWords) {
-    if (/\b(?:[MTmtI1])[-\s\.]?0*\d{1,5}\b/i.test(w.text) && w.bbox) {
+    if (/\b(?:[A-Za-z]|ஆ)[-\s\.]?0*\d{1,5}\b/i.test(w.text) && w.bbox) {
       cardHeaderX.push((w.bbox.x0 + w.bbox.x1) / 2);
     }
   }
@@ -687,8 +860,14 @@ export function extractEverySingleBoxFromPdfPage(contentItems) {
     if (validItems[i + 1]) {
       nextCombined = `${text} ${validItems[i + 1].str.trim()}`;
     }
+    let nextCombined2 = nextCombined;
+    if (validItems[i + 2]) {
+      nextCombined2 = `${nextCombined} ${validItems[i + 2].str.trim()}`;
+    }
 
-    if (/^[MTmtI1]\s*-\s*\d{1,5}$/i.test(text) || /^[MTmtI1]\s*-\s*\d{1,5}$/i.test(nextCombined)) {
+    if (/^(?:[A-Za-z]|ஆ)\s*[-\–—_~]\s*\d{1,6}$/i.test(text) ||
+        /^(?:[A-Za-z]|ஆ)\s*[-\–—_~]\s*\d{1,6}$/i.test(nextCombined) ||
+        /^(?:[A-Za-z]|ஆ)\s*[-\–—_~]\s*\d{1,6}$/i.test(nextCombined2)) {
       isHeader = true;
     }
 
@@ -707,7 +886,7 @@ export function extractEverySingleBoxFromPdfPage(contentItems) {
   const validBoxes = [];
   for (const bTokens of boxes) {
     const bText = bTokens.map(t => t.str).join(' ');
-    if (/\b(?:[MTmtI1])[-\s]?0*\d{1,5}\b/i.test(bText)) {
+    if (/\b(?:[A-Za-z]|ஆ)[-\s]?0*\d{1,5}\b/i.test(bText)) {
       const lineMap = new Map();
       for (const t of bTokens) {
         const y = Math.round((t.transform ? t.transform[5] : 0) / 3) * 3;
@@ -794,15 +973,21 @@ export function parseSingleBoxToAddress(boxContent, fileName = 'Imported PDF') {
   const rawLines = unicodeText.split('\n').map(l => l.trim()).filter(Boolean);
   if (rawLines.length === 0) return null;
 
-  // 1. Extract U.Id (e.g. T-0001, T-0010, T-0019, T-0028, etc.)
-  let uId = getCardCode(boxContent) || '';
+  // 1. Extract U.Id (e.g. T-0001, M-0001, A-0001, etc. Must strictly have an alphabet letter prefix and hyphen)
+  let uId = getCardCode(boxContent) || getCardCode(unicodeText) || '';
   if (!uId) {
-    const uMatch = boxContent.match(/(?:^|[\s\n\r\t,;\(\)\{\}\[\]•·\-\–—])([MTmtI1])[-\s\.\:—_–~]?\s*0*(\d{1,5})\b/i);
+    const uMatch = boxContent.match(/(?:^|[\s\n\r\t,;\(\)\{\}\[\]•·])(?<![A-Za-z0-9])([A-Za-z]|ஆ)\s*[-\–—_~]\s*0*(\d{1,6})\b/i) ||
+                   unicodeText.match(/(?:^|[\s\n\r\t,;\(\)\{\}\[\]•·])(?<![A-Za-z0-9])([A-Za-z]|ஆ)\s*[-\–—_~]\s*0*(\d{1,6})\b/i);
     if (uMatch) {
       let pfx = uMatch[1].toUpperCase();
-      if (pfx !== 'M' && pfx !== 'T') pfx = 'T';
-      uId = `${pfx}-${String(parseInt(uMatch[2], 10)).padStart(4, '0')}`;
+      if (pfx === 'ஆ') pfx = 'M';
+      if (/^[A-Z]$/.test(pfx)) {
+        uId = `${pfx}-${String(parseInt(uMatch[2], 10)).padStart(4, '0')}`;
+      }
     }
+  }
+  if (uId && !/^[A-Za-z]-\d{4,}$/.test(uId)) {
+    uId = '';
   }
 
   // 2. Extract Phone Number
@@ -815,13 +1000,19 @@ export function parseSingleBoxToAddress(boxContent, fileName = 'Imported PDF') {
     }
   }
 
-  // 3. Extract 6-digit Pincode
+  // 3. Extract strictly 6-digit Pincode (e.g. 627811, 627805, 628303, 625014, 641001)
   let pincode = '';
-  const pincodeMatch = unicodeText.match(/(?:DE|Dr|DI|Dt|Pin|Pincode|PIN)?\s*(?<!\d)([1-9]\d{2})\s*(\d{3})(?!\d)|(?:DE|Dr|DI|Dt|Pin|Pincode|PIN)?\s*(?<!\d)([1-9]\d{5})(?!\d)/i);
+  const pincodeMatch = unicodeText.match(/(?:DE|Dr|DI|Dt|Pin|Pincode|PIN)?\s*(?<!\d)(6\d{2})\s*(\d{3})(?!\d)|(?:DE|Dr|DI|Dt|Pin|Pincode|PIN)?\s*(?<!\d)(6\d{5})(?!\d)|(?:DE|Dr|DI|Dt|Pin|Pincode|PIN)?\s*(?<!\d)([1-9]\d{2})\s*(\d{3})(?!\d)|(?:DE|Dr|DI|Dt|Pin|Pincode|PIN)?\s*(?<!\d)([1-9]\d{5})(?!\d)/i);
   if (pincodeMatch) {
-    const fullPin = (pincodeMatch[1] && pincodeMatch[2]) ? (pincodeMatch[1] + pincodeMatch[2]) : (pincodeMatch[3] || pincodeMatch[0].match(/\d{6}/)?.[0]);
-    if (fullPin && fullPin !== phone) {
-      pincode = fullPin;
+    let cand = '';
+    if (pincodeMatch[1] && pincodeMatch[2]) cand = pincodeMatch[1] + pincodeMatch[2];
+    else if (pincodeMatch[3]) cand = pincodeMatch[3];
+    else if (pincodeMatch[4] && pincodeMatch[5]) cand = pincodeMatch[4] + pincodeMatch[5];
+    else if (pincodeMatch[6]) cand = pincodeMatch[6];
+
+    const cleanPin = cand.replace(/\D/g, '');
+    if (cleanPin.length === 6 && cleanPin !== phone && !cleanPin.startsWith('10') && !cleanPin.startsWith('11')) {
+      pincode = cleanPin;
     }
   }
 
@@ -844,8 +1035,12 @@ export function parseSingleBoxToAddress(boxContent, fileName = 'Imported PDF') {
       }
     }
   }
-  if (!pincode) {
-    pincode = detectedDistrict === 'Tenkasi' ? '627811' : (detectedDistrict === 'Coimbatore' ? '641001' : '627811');
+  if (!pincode || pincode.length !== 6) {
+    pincode = detectedDistrict === 'Thoothukudi' ? '628303' : 
+              (detectedDistrict === 'Tenkasi' ? '627811' : 
+              (detectedDistrict === 'Coimbatore' ? '641001' : 
+              (detectedDistrict === 'Madurai' ? '625014' : 
+              (detectedDistrict === 'Chennai' ? '600001' : '627811'))));
   }
 
   // 5. Extract Post Office / Area / Village Name
@@ -867,15 +1062,15 @@ export function parseSingleBoxToAddress(boxContent, fileName = 'Imported PDF') {
   const doorMatch = unicodeText.match(/(?:^|[\s,;])(?:(\d+[\/\-]\d+(?:\s*\(\s*\d+\s*\))?)|(?:No\.?\s*(\d+[A-Za-z]?))|(?:Door\s*No\.?\s*(\d+[A-Za-z]?))|([1-9]\d{0,3}\s*[\/\-]\s*\d+[A-Za-z]?)|(\bL\s*\d+\b))/i);
   if (doorMatch) {
     const rawDoor = (doorMatch[1] || doorMatch[2] || doorMatch[3] || doorMatch[4] || doorMatch[5] || doorMatch[0]).trim();
-    if (!/\b(Tamil|India|Phone|Mobile|Pincode|Cell|\d{5,6}|\d{10}|T|M|Tk|Po|Dt)\b/i.test(rawDoor) && !/^[MTmtI1]\s*-\s*\d+/i.test(rawDoor)) {
+    if (!/\b(Tamil|India|Phone|Mobile|Pincode|Cell|\d{5,6}|\d{10}|T|M|Tk|Po|Dt)\b/i.test(rawDoor) && !/^(?:[A-Za-z]|ஆ)\s*-\s*\d+/i.test(rawDoor)) {
       doorNo = rawDoor;
     }
   }
 
   // 7. Parse Name, Relation, and Address Lines
   const contentLines = rawLines.filter(line => {
-    // Skip U.Id only line
-    if (/^[MTmtI1][-\s]?\d+/i.test(line) && line.replace(/^[MTmtI1][-\s]?\d+/i, '').trim().length === 0) return false;
+    // Skip U.Id only line (e.g. T-0001, M-0001)
+    if (/^(?:[A-Za-z]|ஆ)[-\s\.\:—_–~]?\s*0*\d{1,5}$/i.test(line.trim())) return false;
     // Skip pure Cell line
     if (/^Cell\s*[\:\.]?\s*\d+/i.test(line)) return false;
     // Skip page headers
@@ -889,7 +1084,7 @@ export function parseSingleBoxToAddress(boxContent, fileName = 'Imported PDF') {
   let addressLines = [];
 
   for (let i = 0; i < contentLines.length; i++) {
-    let line = contentLines[i].replace(/^[MTmtI1][-\s\.\:—_–~]?\s*0*\d{1,5}\b\s*/i, '').trim();
+    let line = contentLines[i].replace(/^(?:[A-Za-z]|ஆ)[-\s\.\:—_–~]?\s*0*\d{1,5}\b\s*/i, '').trim();
     if (!line) continue;
 
     // Check if line contains relationship (S/o, W/o, D/o, C/o)
@@ -901,7 +1096,11 @@ export function parseSingleBoxToAddress(boxContent, fileName = 'Imported PDF') {
         name = beforeRel || line;
         relation = `${relMatch[1].toUpperCase()}.${relMatch[2].trim()}`;
       } else {
-        name = line;
+        const split = splitNameAndAddressLine(line);
+        name = split.name;
+        if (split.address && split.address.trim()) {
+          addressLines.push(split.address.trim());
+        }
       }
     } else {
       if (relMatch && !relation) {
@@ -926,6 +1125,9 @@ export function parseSingleBoxToAddress(boxContent, fileName = 'Imported PDF') {
     .replace(/,+/g, ',')
     .replace(/^[,;\s]+|[,;\s]+$/g, '')
     .trim();
+
+  // Clean district name out of address line so it is not duplicated
+  fullAddress = stripDistrictFromAddressLine(fullAddress, detectedDistrict);
 
   if (!fullAddress) {
     fullAddress = `${name}'s Address`;
@@ -1050,18 +1252,38 @@ export async function parsePdfOrDocumentAddresses(file, rawText = null) {
   } else if (isImage) {
     try {
       const tesseract = await loadTesseractLibrary();
-      const processedCanvas = await preprocessImageForTamilOCR(file);
+      const preprocessed = await preprocessImageForTamilOCR(file);
       
-      let result;
-      try {
-        result = await tesseract.recognize(processedCanvas, 'tam+eng');
-      } catch (ocrErr) {
-        console.warn('Tamil OCR model fallback to eng:', ocrErr);
-        result = await tesseract.recognize(processedCanvas, 'eng');
+      let fullText = '';
+      if (preprocessed && preprocessed.isColumns && preprocessed.columns.length > 0) {
+        const columnTexts = [];
+        for (let c = 0; c < preprocessed.columns.length; c++) {
+          const colCanvas = preprocessed.columns[c];
+          let colResult;
+          try {
+            colResult = await tesseract.recognize(colCanvas, 'tam+eng');
+          } catch (ocrErr) {
+            colResult = await tesseract.recognize(colCanvas, 'eng');
+          }
+          if (colResult?.data?.text) {
+            columnTexts.push(colResult.data.text.trim());
+          }
+        }
+        fullText = normalizeAndRepairTamilOCR(convertBaminiToUnicode(columnTexts.join('\n\n')));
+      } else {
+        const singleCanvas = (preprocessed && preprocessed.canvas) ? preprocessed.canvas : preprocessed;
+        let result;
+        try {
+          result = await tesseract.recognize(singleCanvas, 'tam+eng');
+        } catch (ocrErr) {
+          console.warn('Tamil OCR model fallback to eng:', ocrErr);
+          result = await tesseract.recognize(singleCanvas, 'eng');
+        }
+        
+        const columnOcrText = extractTextFromOcrWordsByColumns(result?.data);
+        fullText = normalizeAndRepairTamilOCR(convertBaminiToUnicode(columnOcrText || result?.data?.text || ''));
       }
-      
-      const columnOcrText = extractTextFromOcrWordsByColumns(result?.data);
-      const fullText = normalizeAndRepairTamilOCR(convertBaminiToUnicode(columnOcrText || result?.data?.text || ''));
+
       const addresses = parseUnstructuredBlocks(fullText, fileName);
       if (addresses.length > 0) return addresses;
       return parseSingleLineTableRows(fullText, fileName);
@@ -1175,11 +1397,14 @@ function processOriginalExtractedRows(rows, fileName) {
     }
 
     // Name is the first non-numeric content token
-    let name = convertBaminiToUnicode(contentTokens[0] || 'Contact Name');
-    let addressPart = convertBaminiToUnicode(contentTokens.slice(1).join(' ').trim());
-
-    // Clean address line (remove duplicate district names)
-    addressPart = addressPart.replace(new RegExp(`\\b${detectedDistrict}\\b`, 'gi'), '').trim();
+    const firstToken = contentTokens[0] ? contentTokens[0].trim() : '';
+    if (!firstToken || firstToken.length < 2) continue;
+    let name = convertBaminiToUnicode(firstToken);
+    let addressPart = contentTokens.slice(1).join(' ').trim();
+    if (addressPart) {
+      addressPart = convertBaminiToUnicode(addressPart);
+      addressPart = stripDistrictFromAddressLine(addressPart, detectedDistrict);
+    }
     if (!addressPart) addressPart = `${name}'s Address`;
 
     addresses.push({
@@ -1206,22 +1431,18 @@ function getCardCode(line) {
   if (!line || typeof line !== 'string') return null;
   const clean = line.trim();
 
-  // Match strictly M-XXXX or T-XXXX (e.g. "M-0001", "M-0010", "T-0001", "T-0136", "M0050", "T0050", "I-0136", "1-0136")
-  const m = clean.match(/(?:^|[\s\n\r\t,;\(\)\{\}\[\]•·\-\–—])([MmTtI1])[-\s\.]?0*(\d{1,5})\b/i);
+  // Match card code strictly starting with an isolated alphabet letter followed by hyphen:
+  // e.g. "M-0001", "T-0001", "A-0001", "ஆ-0001", "T-10"
+  // Words like Dt, Tk, Dr, No, Door, Cell are strictly disallowed as U.Id prefixes!
+  const m = clean.match(/(?:^|[\s\n\r\t,;\(\)\{\}\[\]•·])(?<![A-Za-z0-9])([A-Za-z]|ஆ)\s*[-\–—_~]\s*0*(\d{1,6})\b/i);
   if (m) {
     let prefix = m[1].toUpperCase();
-    if (prefix !== 'M' && prefix !== 'T') prefix = 'M';
-    const num = parseInt(m[2], 10);
-    if (num >= 1 && num <= 99999) {
-      return `${prefix}-${String(num).padStart(4, '0')}`;
-    }
-  }
-
-  // Pure numeric card code line at top of box e.g. "0050" or "00050"
-  if (/^0*\d{1,5}$/.test(clean)) {
-    const num = parseInt(clean, 10);
-    if (num >= 1 && num <= 99999) {
-      return `M-${String(num).padStart(4, '0')}`;
+    if (prefix === 'ஆ') prefix = 'M';
+    if (/^[A-Z]$/.test(prefix)) {
+      const num = parseInt(m[2], 10);
+      if (num >= 1 && num <= 99999) {
+        return `${prefix}-${String(num).padStart(4, '0')}`;
+      }
     }
   }
 
@@ -1239,7 +1460,8 @@ function splitNameAndAddressLine(line) {
   if (!line || typeof line !== 'string') return { name: line, address: '' };
 
   // Remove leading index prefix or U.Id if still present
-  let clean = line.replace(/^(?:M|m|T|t|I|1)[-\s\.]?0*\d{1,5}\b\s*/i, '').trim();
+  let clean = line.replace(/^(?:[A-Za-z]|ஆ)[-\s\.]?0*\d{1,5}\b\s*/i, '').trim();
+  clean = clean.replace(/^\d{1,3}[\.\)]\s*/, '').trim();
   clean = clean.replace(/^\d{1,3}[\.\)]\s*/, '').trim();
 
   const addressKeywords = [
@@ -1276,9 +1498,9 @@ function segmentIntoAddressBlocks(fullText) {
 
   const text = deMashHorizontalGridText(fullText);
 
-  const pincodePattern = /(?:(?:DE|Dr|DI|Dt|TE|D|Pin|Pincode|PIN|P\.O\.|Po)\.?\s*)?(?<!\d)([1-9]\d{2})\s*(\d{3})(?!\d)|(?:(?:DE|Dr|DI|Dt|TE|D|Pin|Pincode|PIN|P\.O\.|Po)\.?\s*)?(?<!\d)([1-9]\d{4,5})(?!\d)/gi;
+  const pincodePattern = /(?:(?:DE|Dr|DI|Dt|TE|D|Pin|Pincode|PIN|P\.O\.|Po)\.?\s*)?(?<!\d)([1-9]\d{2})\s*(\d{3})(?!\d)|(?:(?:DE|Dr|DI|Dt|TE|D|Pin|Pincode|PIN|P\.O\.|Po)\.?\s*)?(?<!\d)([1-9]\d{5})(?!\d)/gi;
   const phonePattern = /(?:Cell|Mobile|Ph|Mob|Tel|DI|DE|Dr|Dt)?\s*[\:\.\-]?\s*(?<!\d)([6-9]\d{4}\s*\d{5}|[6-9]\d{9})(?!\d)/gi;
-  const uidGlobalRegex = /(?:^|[\s\n\r\t,;\(\)\{\}\[\]•·\-\–—])([MmtTI1])[-\s\.\:—_–~]?\s*0*(\d{1,5})\b/gi;
+  const uidGlobalRegex = /(?:^|[\s\n\r\t,;\(\)\{\}\[\]•·])(?<![A-Za-z0-9])([A-Za-z]|ஆ)\s*[-\–—_~]\s*0*(\d{1,6})\b/gi;
 
   // 1. Check if multi-line text consists of self-contained address lines
   const rawLines = text.split('\n').map(l => l.trim()).filter(Boolean);
@@ -1287,7 +1509,7 @@ function segmentIntoAddressBlocks(fullText) {
   if (rawLines.length >= 2) {
     let linesWithPinOrDistrictOrUid = 0;
     for (const line of rawLines) {
-      const hasUid = /(?:^|[\s\n\r\t,;\(\)\{\}\[\]•·\-\–—])([MmtTI1])[-\s\.\:—_–~]?\s*0*(\d{1,5})\b/i.test(line);
+      const hasUid = /(?:^|[\s\n\r\t,;\(\)\{\}\[\]•·])(?<![A-Za-z0-9])([A-Za-z]|ஆ)\s*[-\–—_~]\s*0*(\d{1,6})\b/i.test(line);
       pincodePattern.lastIndex = 0;
       const hasPin = pincodePattern.test(line);
       const hasDistrictOrTk = /தூத்துக்குடி|திருநெல்வேலி|தென்காசி|சென்னை|கோவை|மதுரை|Salem|Coimbatore|Chennai|Madurai|Tk|Po|Dt|Dr|Taluk|தாலுகா/i.test(line);
@@ -1305,16 +1527,18 @@ function segmentIntoAddressBlocks(fullText) {
   if (isEachLineAnAddress) {
     for (const line of rawLines) {
       let uId = '';
-      const uMatch = line.match(/(?:^|[\s\n\r\t,;\(\)\{\}\[\]•·\-\–—])([MTmtI1])[-\s\.\:—_–~]?\s*0*(\d{1,5})\b/i);
+      const uMatch = line.match(/(?:^|[\s\n\r\t,;\(\)\{\}\[\]•·])(?<![A-Za-z0-9])([A-Za-z]|ஆ)\s*[-\–—_~]\s*0*(\d{1,6})\b/i);
       if (uMatch) {
         let pfx = uMatch[1].toUpperCase();
-        if (pfx !== 'M' && pfx !== 'T') pfx = 'T';
-        uId = `${pfx}-${String(parseInt(uMatch[2], 10)).padStart(4, '0')}`;
+        if (pfx === 'ஆ') pfx = 'M';
+        if (/^[A-Z]$/.test(pfx)) {
+          uId = `${pfx}-${String(parseInt(uMatch[2], 10)).padStart(4, '0')}`;
+        }
       }
       primaryBlocks.push({ uId, content: line });
     }
   } else {
-    // 2. Continuous text: Match valid M-code or T-code U.Id anchors across the entire text
+    // 2. Continuous text: Match valid M-code, T-code, or other alphabet U.Id anchors across the entire text
     const uidAnchors = [];
     let m;
     uidGlobalRegex.lastIndex = 0;
@@ -1322,7 +1546,8 @@ function segmentIntoAddressBlocks(fullText) {
       const rawMatch = m[0].trim();
       const matchIndex = m.index;
       let prefix = m[1].toUpperCase();
-      if (prefix !== 'M' && prefix !== 'T') prefix = 'M';
+      if (prefix === 'ஆ') prefix = 'M';
+      if (!/^[A-Z]$/.test(prefix)) continue;
       const numPart = m[2];
       if (numPart) {
         const num = parseInt(numPart, 10);
@@ -1515,16 +1740,21 @@ function parseUnstructuredBlocks(fullText, fileName) {
     if (lines.length === 0) continue;
 
     // Skip generic document header titles
-    if (lines.length === 1 && !/\d{4,6}|\d{10}|[MTmtI1][-\s]?\d{2,5}/i.test(lines[0]) && !block.uId && lines[0].length < 15) continue;
+    if (lines.length === 1 && !/\d{4,6}|\d{10}|(?:[A-Za-z]|ஆ)[-\s]?\d{2,5}/i.test(lines[0]) && !block.uId && lines[0].length < 15) continue;
 
     let uId = block.uId || getCardCode(blockText) || '';
     if (!uId) {
-      const uMatch = blockText.match(/(?:^|[\s\n\r\t,;\(\)\{\}\[\]•·\-\–—])([MTmtI1])[-\s\.\:—_–~]?\s*0*(\d{1,5})\b/i);
+      const uMatch = blockText.match(/(?:^|[\s\n\r\t,;\(\)\{\}\[\]•·])(?<![A-Za-z0-9])([A-Za-z]|ஆ)\s*[-\–—_~]\s*0*(\d{1,6})\b/i);
       if (uMatch) {
         let pfx = uMatch[1].toUpperCase();
-        if (pfx !== 'M' && pfx !== 'T') pfx = 'T';
-        uId = `${pfx}-${String(parseInt(uMatch[2], 10)).padStart(4, '0')}`;
+        if (pfx === 'ஆ') pfx = 'M';
+        if (/^[A-Z]$/.test(pfx)) {
+          uId = `${pfx}-${String(parseInt(uMatch[2], 10)).padStart(4, '0')}`;
+        }
       }
+    }
+    if (uId && !/^[A-Za-z]-\d{4,}$/.test(uId)) {
+      uId = '';
     }
 
     let phone = '';
@@ -1535,11 +1765,11 @@ function parseUnstructuredBlocks(fullText, fileName) {
     let areaName = '';
     let state = 'Tamil Nadu';
 
-    // 1. Extract Phone Number
-    const phoneMatch = blockText.match(/(?:Cell|Mobile|Ph|Mob|Tel|DI|DE|Dr|Dt)?\s*[\:\.\-]?\s*(?<!\d)([6-9]\d{4}\s*\d{5}|[6-9]\d{9})(?!\d)/i);
+    // 1. Extract Phone Number (10-digit mobile or landline with STD area code)
+    const phoneMatch = blockText.match(/(?:Cell|Mobile|Ph|Mob|Tel|Phone|DI|DE|Dr|Dt)?\s*[\:\.\-]?\s*(?<!\d)(0\d{2,4}\s*[\-\s]?\s*\d{5,8}|[6-9]\d{4}\s*\d{5}|[6-9]\d{9})(?!\d)/i);
     if (phoneMatch) {
       const cleanPhone = phoneMatch[1].replace(/\s+/g, '');
-      if (cleanPhone.length === 10) {
+      if (cleanPhone.length >= 8 && cleanPhone.length <= 12) {
         phone = cleanPhone;
       }
     }
@@ -1562,16 +1792,26 @@ function parseUnstructuredBlocks(fullText, fileName) {
       }
     }
 
-    // 3. Extract Pincode (e.g. "628 303", "628303", "62803", "627 802", "627858", "D 628303", "Dr 62803")
-    const pincodeMatch = blockText.match(/(?:DE|Dr|DI|Dt|TE|D|Pin|Pincode|PIN|P\.O\.|Po)?\.?\s*(?<!\d)([1-9]\d{2})\s*(\d{3})(?!\d)|(?:DE|Dr|DI|Dt|TE|D|Pin|Pincode|PIN|P\.O\.|Po)?\.?\s*(?<!\d)([1-9]\d{4,5})(?!\d)/i);
+    // 3. Extract strictly 6-digit Pincode
+    const pincodeMatch = blockText.match(/(?:DE|Dr|DI|Dt|TE|D|Pin|Pincode|PIN|P\.O\.|Po)?\.?\s*(?<!\d)(6\d{2})\s*(\d{3})(?!\d)|(?:DE|Dr|DI|Dt|TE|D|Pin|Pincode|PIN|P\.O\.|Po)?\.?\s*(?<!\d)(6\d{5})(?!\d)|(?:DE|Dr|DI|Dt|TE|D|Pin|Pincode|PIN|P\.O\.|Po)?\.?\s*(?<!\d)([1-9]\d{2})\s*(\d{3})(?!\d)|(?:DE|Dr|DI|Dt|TE|D|Pin|Pincode|PIN|P\.O\.|Po)?\.?\s*(?<!\d)([1-9]\d{5})(?!\d)/i);
     if (pincodeMatch) {
-      const fullPin = pincodeMatch[1] && pincodeMatch[2] ? (pincodeMatch[1] + pincodeMatch[2]) : (pincodeMatch[3] || pincodeMatch[0].match(/\d{5,6}/)?.[0]);
-      if (fullPin && fullPin !== phone) {
-        pincode = fullPin;
+      let cand = '';
+      if (pincodeMatch[1] && pincodeMatch[2]) cand = pincodeMatch[1] + pincodeMatch[2];
+      else if (pincodeMatch[3]) cand = pincodeMatch[3];
+      else if (pincodeMatch[4] && pincodeMatch[5]) cand = pincodeMatch[4] + pincodeMatch[5];
+      else if (pincodeMatch[6]) cand = pincodeMatch[6];
+
+      const cleanPin = cand.replace(/\D/g, '');
+      if (cleanPin.length === 6 && cleanPin !== phone && !cleanPin.startsWith('10') && !cleanPin.startsWith('11')) {
+        pincode = cleanPin;
       }
     }
-    if (!pincode) {
-      pincode = detectedDistrict === 'Thoothukudi' ? '628303' : (detectedDistrict === 'Tenkasi' ? '627811' : (detectedDistrict === 'Coimbatore' ? '641001' : '627811'));
+    if (!pincode || pincode.length !== 6) {
+      pincode = detectedDistrict === 'Thoothukudi' ? '628303' : 
+                (detectedDistrict === 'Tenkasi' ? '627811' : 
+                (detectedDistrict === 'Coimbatore' ? '641001' : 
+                (detectedDistrict === 'Madurai' ? '625014' : 
+                (detectedDistrict === 'Chennai' ? '600001' : '627811'))));
     }
 
     // 4. Extract Post Office / Taluk / Village Area
@@ -1599,9 +1839,9 @@ function parseUnstructuredBlocks(fullText, fileName) {
 
     // 6. Name and Address Line 1 extraction
     let cleanedText = blockText
-      .replace(/(?:^|\b)(?:[MTmtI1][-\s\.\:—_–~]?\s*0*\d{2,5})\b/gi, '')
-      .replace(/(?:Cell|Phone|Mobile|Ph|Mob|Tel|DI|DE|Dr|Dt|TE|D)?\s*[\:\.\-]?\s*(?<!\d)[6-9]\d{4}\s*\d{5}(?!\d)/gi, '')
-      .replace(/(?:Cell|Phone|Mobile|Ph|Mob|Tel|DI|DE|Dr|Dt|TE|D)?\s*[\:\.\-]?\s*(?<!\d)[6-9]\d{9}(?!\d)/gi, '')
+      .replace(/(?:^|\b)(?:[A-Za-z]|ஆ)[-\s\.\:—_–~]?\s*0*\d{1,6}\b/gi, '')
+      .replace(/(?:Cell|Phone|Mobile|Ph|Mob|Tel|DI|DE|Dr|Dt|TE|D)?\s*[\:\.\-]?\s*(?<!\d)(?:0\d{2,4}\s*[\-\s]?\s*\d{5,8}|[6-9]\d{4}\s*\d{5}|[6-9]\d{9})(?!\d)/gi, '')
+      .replace(/\b0\d{2,4}\s*[-\:]\s*/g, '')
       .replace(/(?:DE|Dr|DI|Dt|TE|D|Pin|Pincode|PIN|Po|P\.O\.)?\.?\s*(?<!\d)[1-9]\d{2}\s*\d{3}(?!\d)/gi, '')
       .replace(/(?:DE|Dr|DI|Dt|TE|D|Pin|Pincode|PIN|Po|P\.O\.)?\.?\s*(?<!\d)[1-9]\d{4,5}(?!\d)/gi, '')
       .replace(/Tamil\s*Nadu(\s*[\-\:]\s*\d{6})?/gi, '')
@@ -1616,7 +1856,7 @@ function parseUnstructuredBlocks(fullText, fileName) {
     for (let i = 0; i < textLines.length; i++) {
       const line = textLines[i];
       if (!line) continue;
-      if (/^(?:10\d{3}|1\d{4}|\d{4,6})$/.test(line)) continue;
+      if (/^(?:10\d{3}|1\d{4}|\d{4,6}|0\d{2,4}\s*[-\:]?)$/.test(line)) continue;
 
       if (!name) {
         const split = splitNameAndAddressLine(line);
@@ -1629,8 +1869,12 @@ function parseUnstructuredBlocks(fullText, fileName) {
       }
     }
 
-    if (!name) {
-      name = textLines[0] || 'Contact Name';
+    if (!name && textLines.length > 0) {
+      name = textLines[0];
+    }
+
+    if (name) {
+      name = convertBaminiToUnicode(name).trim();
     }
 
     let fullAddressLine = addressParts.join(', ')
@@ -1639,15 +1883,18 @@ function parseUnstructuredBlocks(fullText, fileName) {
       .replace(/^[,;\s]+|[,;\s]+$/g, '')
       .trim();
 
-    if (!fullAddressLine) {
-      fullAddressLine = `${name}'s Address`;
+    if (fullAddressLine) {
+      fullAddressLine = convertBaminiToUnicode(fullAddressLine).trim();
+      fullAddressLine = stripDistrictFromAddressLine(fullAddressLine, detectedDistrict);
     }
 
-    name = convertBaminiToUnicode(name);
-    fullAddressLine = convertBaminiToUnicode(fullAddressLine);
-    const finalArea = areaName ? convertBaminiToUnicode(areaName) : (detectedDistrict || 'Thoothukudi');
+    const finalArea = areaName ? convertBaminiToUnicode(areaName) : (detectedDistrict || 'Tenkasi');
 
-    if (name && (fullAddressLine || phone || pincode || uId)) {
+    // ONLY push if name is valid (at least 2 chars, not pure digits, not metadata or document headers)
+    if (name && name.length >= 2 && !/^\d+$/.test(name) && !isPdfMetadata(name) && !/^(?:Sanju|Page\s*\d+|Ten\s*-\s*Po)/i.test(name)) {
+      if (!fullAddressLine) {
+        fullAddressLine = `${name}'s Address`;
+      }
       results.push({
         u_id: uId,
         name: name.substring(0, 70),
@@ -1663,6 +1910,15 @@ function parseUnstructuredBlocks(fullText, fileName) {
         phone: phone,
         landmark: 'Extracted from Tamil Directory Format',
       });
+    } else if (results.length > 0 && (phone || fullAddressLine)) {
+      // If this block has no name but has a phone number or address fragment, attach it to the PREVIOUS record instead of creating a dummy ghost record!
+      const prev = results[results.length - 1];
+      if (!prev.phone && phone) {
+        prev.phone = phone;
+      }
+      if (fullAddressLine && !prev.address_line_1.includes(fullAddressLine)) {
+        prev.address_line_1 = `${prev.address_line_1}, ${fullAddressLine}`.substring(0, 140);
+      }
     }
   }
 
@@ -1737,9 +1993,15 @@ function parseSingleLineTableRows(fullText, fileName) {
 
     if (tokens.length < 1) continue;
 
-    let name = convertBaminiToUnicode(tokens[0] || 'Contact Name');
-    let addressPart = convertBaminiToUnicode(tokens.slice(1).join(' ').trim());
-    addressPart = addressPart.replace(new RegExp(`\\b${detectedDistrict}\\b`, 'gi'), '').trim();
+    const firstToken = tokens[0] ? tokens[0].trim() : '';
+    if (!firstToken || firstToken.length < 2) continue;
+
+    let name = convertBaminiToUnicode(firstToken);
+    let addressPart = tokens.slice(1).join(' ').trim();
+    if (addressPart) {
+      addressPart = convertBaminiToUnicode(addressPart);
+      addressPart = stripDistrictFromAddressLine(addressPart, detectedDistrict);
+    }
     if (!addressPart) addressPart = `${name}'s Address`;
 
     const doorMatch = line.match(/\b(?:\d+[\/\-]\d+|No\.?\s*\d+|Door\s*No\.?\s*\d+|\d{1,4}[A-Za-z]?)\b/i);

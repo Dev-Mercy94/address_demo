@@ -60,7 +60,7 @@ export function useAddresses(initialParams = {}, onStatsChange = null) {
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     searchTimeoutRef.current = setTimeout(() => {
       setDebouncedSearch(searchTerm);
-    }, 200);
+    }, 400);
   }, []);
 
   const setUId = useCallback((uId) => {
