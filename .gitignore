@@ -11,4 +11,5 @@ __pycache__
 .idea
 android/.idea
 *.apk
+!public/address-hub.apk
 
