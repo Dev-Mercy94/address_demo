@@ -1,4 +1,7 @@
-const API_BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '') || '/.netlify/functions';
+const API_BASE = (
+  import.meta.env.VITE_API_BASE_URL ||
+  (import.meta.env.DEV ? '/.netlify/functions' : 'https://addresshubmanagement.netlify.app/.netlify/functions')
+).replace(/\/$/, '');
 
 function sanitizeString(str) {
   if (typeof str !== 'string') return str;
@@ -145,16 +148,26 @@ export async function triggerSeedData(count = 10) {
 }
 
 export async function loginAdmin(username, password) {
-  const res = await fetch(`${API_BASE}/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password })
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(data.error || 'Authentication failed. Please check your credentials.');
+  try {
+    const res = await fetch(`${API_BASE}/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) {
+      throw new Error(data?.error || `Server error (${res.status}). Please check your credentials.`);
+    }
+    if (!data) {
+      throw new Error('Invalid server response format.');
+    }
+    return data;
+  } catch (err) {
+    if (err.name === 'TypeError' && (err.message || '').toLowerCase().includes('fetch')) {
+      throw new Error('Network error: Unable to connect to server. Please check your internet connection.');
+    }
+    throw err;
   }
-  return data;
 }
 
 export async function registerAdmin(username, password, name = 'Administrator') {

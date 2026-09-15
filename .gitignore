@@ -6,4 +6,9 @@ dist
 .netlify
 __pycache__
 *.pyc
+*.jar
+*.zip
+.idea
+android/.idea
+*.apk
 
