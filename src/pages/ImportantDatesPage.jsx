@@ -1094,7 +1094,9 @@ export function ImportantDatesPage({ onNavigate }) {
                     borderRadius: '4px',
                     backgroundColor: 'rgba(37, 99, 235, 0.15)',
                     color: '#2563eb',
-                    fontFamily: 'var(--font-mono)'
+                    fontFamily: 'var(--font-sans)',
+                    fontVariantNumeric: 'tabular-nums',
+                    fontFeatureSettings: '"zero" 0'
                   }}>
                     {item.u_id || 'ID'}
                   </span>
@@ -1294,7 +1296,7 @@ export function ImportantDatesPage({ onNavigate }) {
                   return (
                     <tr key={item._id} style={{ borderBottom: '1px solid var(--border-color)' }}>
                       {/* U.Id */}
-                      <td style={{ padding: '0.85rem 1rem', fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--accent-primary)' }}>
+                      <td style={{ padding: '0.85rem 1rem', fontFamily: 'var(--font-sans)', fontVariantNumeric: 'tabular-nums', fontFeatureSettings: '"zero" 0', fontWeight: 700, color: 'var(--accent-primary)' }}>
                         {item.u_id || '—'}
                       </td>
 
@@ -1819,7 +1821,7 @@ export function ImportantDatesPage({ onNavigate }) {
                             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-card-hover)'}
                             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                           >
-                            <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--accent-primary)', marginRight: '0.4rem' }}>
+                            <span style={{ fontFamily: 'var(--font-sans)', fontVariantNumeric: 'tabular-nums', fontFeatureSettings: '"zero" 0', fontWeight: 700, color: 'var(--accent-primary)', marginRight: '0.4rem' }}>
                               [{addr.u_id || 'ID'}]
                             </span>
                             <strong>{addr.name}</strong> • {addr.phone || 'No phone'} ({addr.district || addr.city || ''})

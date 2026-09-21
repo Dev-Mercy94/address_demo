@@ -20,10 +20,10 @@ function sanitizeUId(rawUid) {
 
 // Helper to validate that Pincode is strictly 6 digits
 function sanitizePincode(rawPin, district = 'Tenkasi') {
-  const defaultPin = district === 'Thoothukudi' ? '628303' : 
-                     (district === 'Madurai' ? '625014' : 
-                     (district === 'Coimbatore' ? '641001' : 
-                     (district === 'Chennai' ? '600001' : '627811')));
+  const defaultPin = district === 'Thoothukudi' ? '628303' :
+    (district === 'Madurai' ? '625014' :
+      (district === 'Coimbatore' ? '641001' :
+        (district === 'Chennai' ? '600001' : '627811')));
   if (!rawPin) return defaultPin;
   const clean = String(rawPin).replace(/\D/g, '');
   if (clean.length === 6) {
@@ -31,6 +31,46 @@ function sanitizePincode(rawPin, district = 'Tenkasi') {
     if (!clean.startsWith('10') && !clean.startsWith('11')) return clean;
   }
   return defaultPin;
+}
+
+// Helper to clearly determine and explain why a record was flagged as duplicate
+function getDuplicateReason(pair) {
+  if (pair && pair.matchReason) return pair.matchReason;
+  const imp = pair?.importedItem || {};
+  const ex = pair?.existingAddress || {};
+
+  const impPhone = (imp.phone || '').trim();
+  const exPhone = (ex.phone || '').trim();
+  if (impPhone && exPhone && impPhone.length >= 10 && impPhone === exPhone) {
+    return `Same Phone Number: ${impPhone}`;
+  }
+
+  const impName = (imp.name || '').trim().toLowerCase().replace(/\s*\.\s*/g, '.').replace(/\s+/g, ' ');
+  const exName = (ex.name || '').trim().toLowerCase().replace(/\s*\.\s*/g, '.').replace(/\s+/g, ' ');
+  const impUid = (imp.u_id || '').trim().toLowerCase();
+  const exUid = (ex.u_id || '').trim().toLowerCase();
+
+  if (impName && exName && impName === exName) {
+    if (impUid && exUid && impUid === exUid) {
+      return `Same Name & Unique ID: ${imp.u_id.toUpperCase()}`;
+    }
+    if (impPhone && exPhone && impPhone === exPhone) {
+      return `Same Name & Phone: ${impPhone}`;
+    }
+    if (imp.pincode && ex.pincode && imp.pincode === ex.pincode) {
+      return `Same Contact Name & Pincode: ${imp.pincode}`;
+    }
+    if (imp.address_line_1 && ex.address_line_1 && imp.address_line_1.toLowerCase() === ex.address_line_1.toLowerCase()) {
+      return `Same Contact Name & Street Address`;
+    }
+    return `Same Contact Name: ${imp.name}`;
+  }
+
+  if (impUid && exUid && impUid === exUid) {
+    return `Same Unique ID: ${imp.u_id.toUpperCase()}`;
+  }
+
+  return 'Matching address record details';
 }
 
 // Memoized preview table row to eliminate re-renders on keystroke (100% instant typing)
@@ -47,8 +87,17 @@ const PreviewTableRow = React.memo(function PreviewTableRow({
   }, [item]);
 
   const handleChange = (field, val) => {
-    setLocalItem(prev => ({ ...prev, [field]: val }));
-    onItemChange(globalIdx, field, val);
+    let cleanVal = val;
+    if (field === 'name' && typeof cleanVal === 'string') {
+      cleanVal = cleanVal
+        .replace(/(?:Cell|Mobile|Ph|Mob|Tel|Phone)[\s\:\.\-]*\+?\d[\d\s\-]*/gi, '')
+        .replace(/(?:\+?91[\s-]?)?[6-9]\d{4}[\s-]?\d{5}/g, '')
+        .replace(/(?:\+?91[\s-]?)?[6-9]\d{9}/g, '')
+        .replace(/\b\d{10}\b/g, '')
+        .replace(/\b(Cell|Mobile|Phone|Tel|Mob)\b/gi, '');
+    }
+    setLocalItem(prev => ({ ...prev, [field]: cleanVal }));
+    onItemChange(globalIdx, field, cleanVal);
   };
 
   return (
@@ -129,7 +178,7 @@ export function ImportPage({ onNavigate, onStatsChange }) {
   useEffect(() => {
     previewItemsRef.current = previewItems;
   }, [previewItems]);
-  
+
   // Staging state: holding lists before final database commit
   const [stagedSuccessList, setStagedSuccessList] = useState([]);
   const [stagedOverwritesList, setStagedOverwritesList] = useState([]);
@@ -143,7 +192,7 @@ export function ImportPage({ onNavigate, onStatsChange }) {
   const [isCheckingDuplicates, setIsCheckingDuplicates] = useState(false);
   const [isSavingFinal, setIsSavingFinal] = useState(false);
   const [isFinalSaved, setIsFinalSaved] = useState(false);
-  
+
   const [previewDupModalItem, setPreviewDupModalItem] = useState(null);
   const [previewPage, setPreviewPage] = useState(1);
   const previewLimit = 50;
@@ -234,9 +283,17 @@ export function ImportPage({ onNavigate, onStatsChange }) {
             const rows = results.data || [];
             const parsed = rows.map(r => ({
               u_id: sanitizeUId(r['U.Id'] || r.u_id || r.code || ''),
-              name: (r.Name || r.name) ? convertBaminiToUnicode((r.Name || r.name).trim()) : 'Contact Name',
+              name: (r.Name || r.name)
+                ? convertBaminiToUnicode((r.Name || r.name).trim())
+                    .replace(/(?:Cell|Mobile|Ph|Mob|Tel|Phone)[\s\:\.\-]*\+?\d[\d\s\-]*/gi, '')
+                    .replace(/(?:\+?91[\s-]?)?[6-9]\d{4}[\s-]?\d{5}/g, '')
+                    .replace(/(?:\+?91[\s-]?)?[6-9]\d{9}/g, '')
+                    .replace(/\b\d{10}\b/g, '')
+                    .replace(/\b(Cell|Mobile|Phone|Tel|Mob)\b/gi, '')
+                    .trim() || 'Contact Name'
+                : 'Contact Name',
               door_no: (r['Door No'] || r.door_no) ? convertBaminiToUnicode((r['Door No'] || r.door_no).trim()) : '',
-              address_line_1: (r['Address Line 1'] || r.Address || r.address_line_1) 
+              address_line_1: (r['Address Line 1'] || r.Address || r.address_line_1)
                 ? stripDistrictFromAddressLine(convertBaminiToUnicode((r['Address Line 1'] || r.Address || r.address_line_1).trim()), r.District || r.district)
                 : 'Address Line',
               address_line_2: convertBaminiToUnicode((r['Address Line 2'] || r.address_line_2 || '').trim()),
@@ -367,16 +424,52 @@ export function ImportPage({ onNavigate, onStatsChange }) {
         // 1. Check Intra-batch duplicate (within the same uploaded file)
         let isIntraDup = false;
         let matchedIntraItem = null;
+        let intraReason = '';
 
+        const normItemName = (name || '').trim().toLowerCase().replace(/\s*\.\s*/g, '.').replace(/\s+/g, ' ');
+        const normItemUid = (u_id || '').trim().toLowerCase();
+
+        // 1a. Phone match (10 digits)
         if (phone && phone.length >= 10 && seenBatchKeys.has(`phone:${phone}`)) {
           isIntraDup = true;
           matchedIntraItem = seenBatchKeys.get(`phone:${phone}`);
-        } else if (u_id && seenBatchKeys.has(`uid:${u_id.toLowerCase()}`)) {
+          intraReason = `Same Phone Number: ${phone}`;
+        }
+        // 1b. Name + Pincode match
+        else if (normItemName && pincode && seenBatchKeys.has(`name_pin:${normItemName}_${pincode}`)) {
           isIntraDup = true;
-          matchedIntraItem = seenBatchKeys.get(`uid:${u_id.toLowerCase()}`);
-        } else if (name && pincode && seenBatchKeys.has(`name_pin:${name.toLowerCase()}_${pincode}`)) {
+          matchedIntraItem = seenBatchKeys.get(`name_pin:${normItemName}_${pincode}`);
+          intraReason = `Same Name & Pincode (${pincode})`;
+        }
+        // 1c. Name + U.Id match
+        else if (normItemName && normItemUid && seenBatchKeys.has(`name_uid:${normItemName}_${normItemUid}`)) {
           isIntraDup = true;
-          matchedIntraItem = seenBatchKeys.get(`name_pin:${name.toLowerCase()}_${pincode}`);
+          matchedIntraItem = seenBatchKeys.get(`name_uid:${normItemName}_${normItemUid}`);
+          intraReason = `Same Name & Unique ID: ${u_id.toUpperCase()}`;
+        }
+        // 1d. Same U.Id (only if names are compatible/overlapping)
+        else if (normItemUid && seenBatchKeys.has(`uid:${normItemUid}`)) {
+          const priorItem = seenBatchKeys.get(`uid:${normItemUid}`);
+          const priorNormName = (priorItem.name || '').trim().toLowerCase().replace(/\s*\.\s*/g, '.').replace(/\s+/g, ' ');
+          const nameOverlap = !normItemName || !priorNormName || normItemName === priorNormName ||
+            normItemName.includes(priorNormName) || priorNormName.includes(normItemName) ||
+            normItemName.split(/[\s\.]+/).filter(w => w.length > 2).some(w => priorNormName.includes(w));
+          if (nameOverlap) {
+            isIntraDup = true;
+            matchedIntraItem = priorItem;
+            intraReason = `Same Unique ID: ${u_id.toUpperCase()}`;
+          }
+        }
+
+        // Same name in different districts is NOT a duplicate
+        if (isIntraDup && matchedIntraItem) {
+          const itemDist = (item.district || '').trim().toLowerCase();
+          const matchedDist = (matchedIntraItem.district || '').trim().toLowerCase();
+          if (itemDist && matchedDist && itemDist !== matchedDist) {
+            isIntraDup = false;
+            matchedIntraItem = null;
+            intraReason = '';
+          }
         }
 
         if (isIntraDup && matchedIntraItem) {
@@ -385,17 +478,20 @@ export function ImportPage({ onNavigate, onStatsChange }) {
             existingAddress: {
               ...matchedIntraItem,
               notes: 'Duplicate matching an earlier record in this import file'
-            }
+            },
+            matchReason: intraReason || 'Duplicate found earlier in this file',
+            isEarlierInBatch: true
           });
           continue;
         }
 
         // Record keys in seenBatchKeys for subsequent batch items
         if (phone && phone.length >= 10) seenBatchKeys.set(`phone:${phone}`, item);
-        if (u_id) seenBatchKeys.set(`uid:${u_id.toLowerCase()}`, item);
-        if (name && pincode) seenBatchKeys.set(`name_pin:${name.toLowerCase()}_${pincode}`, item);
+        if (normItemUid) seenBatchKeys.set(`uid:${normItemUid}`, item);
+        if (normItemName && pincode) seenBatchKeys.set(`name_pin:${normItemName}_${pincode}`, item);
+        if (normItemName && normItemUid) seenBatchKeys.set(`name_uid:${normItemName}_${normItemUid}`, item);
 
-        candidateItems.push(item);
+        candidateItems.push({ ...item, _tempImportId: `item_${i}` });
       }
 
       // 2. High-speed bulk checking against database
@@ -406,23 +502,40 @@ export function ImportPage({ onNavigate, onStatsChange }) {
           const res = await batchCheckDuplicateAddresses(chunk);
           if (res && res.duplicates && res.duplicates.length > 0) {
             for (const dup of res.duplicates) {
+              const impDist = (dup.importedItem?.district || '').trim().toLowerCase();
+              const exDist = (dup.existingAddress?.district || '').trim().toLowerCase();
+              // If same name in different district, do NOT mention as duplicate
+              if (impDist && exDist && impDist !== exDist) {
+                continue;
+              }
               dups.push(dup);
             }
           }
-          
+
           // Now add everything that wasn't a duplicate to staged
           for (const item of chunk) {
-             const isDup = res?.duplicates?.find(d => 
-                 (d.importedItem.name === item.name && d.importedItem.phone === item.phone) ||
-                 (item.u_id && d.importedItem.u_id === item.u_id)
-             );
-             if (!isDup) {
-               staged.push({ ...item });
-             }
+            const isDup = dups.some(d => {
+              if (d.importedItem?._tempImportId && item._tempImportId) {
+                return d.importedItem._tempImportId === item._tempImportId;
+              }
+              const imp = d.importedItem;
+              if (!imp) return false;
+              if (item.u_id && imp.u_id && item.u_id.toLowerCase() === imp.u_id.toLowerCase()) return true;
+              if (item.phone && imp.phone && item.phone === imp.phone) return true;
+              if (item.name && imp.name && item.name.toLowerCase() === imp.name.toLowerCase()) {
+                if (item.pincode && imp.pincode && item.pincode === imp.pincode) return true;
+                if (item.address_line_1 && imp.address_line_1 && item.address_line_1.toLowerCase() === imp.address_line_1.toLowerCase()) return true;
+                if (!item.phone && !imp.phone) return true;
+              }
+              return false;
+            });
+            if (!isDup) {
+              staged.push({ ...item });
+            }
           }
         } catch (e) {
           console.error('Batch duplicate check failed:', e);
-          // Fallback if bulk fails? Just stage them to avoid blocking
+          setToast({ message: `Duplicate check error: ${e.message || 'Server error'}.`, type: 'error' });
           for (const item of chunk) staged.push({ ...item });
         }
       }
@@ -555,13 +668,22 @@ export function ImportPage({ onNavigate, onStatsChange }) {
   };
 
   const handleDuplicateItemEdit = (index, field, value) => {
+    let cleanVal = value;
+    if (field === 'name' && typeof cleanVal === 'string') {
+      cleanVal = cleanVal
+        .replace(/(?:Cell|Mobile|Ph|Mob|Tel|Phone)[\s\:\.\-]*\+?\d[\d\s\-]*/gi, '')
+        .replace(/(?:\+?91[\s-]?)?[6-9]\d{4}[\s-]?\d{5}/g, '')
+        .replace(/(?:\+?91[\s-]?)?[6-9]\d{9}/g, '')
+        .replace(/\b\d{10}\b/g, '')
+        .replace(/\b(Cell|Mobile|Phone|Tel|Mob)\b/gi, '');
+    }
     setDuplicateDetails(prev => {
       const updated = [...prev];
       updated[index] = {
         ...updated[index],
         importedItem: {
           ...updated[index].importedItem,
-          [field]: value
+          [field]: cleanVal
         }
       };
       return updated;
@@ -608,7 +730,7 @@ export function ImportPage({ onNavigate, onStatsChange }) {
       const targetPhone = (pair.existingAddress?.phone || '');
 
       setStagedSuccessList(prev => {
-        const matchIdx = prev.findIndex(item => 
+        const matchIdx = prev.findIndex(item =>
           (targetUid && (item.u_id || '').toLowerCase() === targetUid) ||
           (targetPhone && item.phone === targetPhone) ||
           (targetName && (item.name || '').toLowerCase() === targetName)
@@ -677,7 +799,7 @@ export function ImportPage({ onNavigate, onStatsChange }) {
         const targetPhone = (pair.existingAddress?.phone || '');
 
         setStagedSuccessList(prev => {
-          const matchIdx = prev.findIndex(item => 
+          const matchIdx = prev.findIndex(item =>
             (targetUid && (item.u_id || '').toLowerCase() === targetUid) ||
             (targetPhone && item.phone === targetPhone) ||
             (targetName && (item.name || '').toLowerCase() === targetName)
@@ -728,13 +850,15 @@ export function ImportPage({ onNavigate, onStatsChange }) {
     setIsSavingFinal(true);
     try {
       if (stagedSuccessList.length > 0) {
-        await batchImportAddresses(stagedSuccessList, { force: true });
+        const cleanedList = stagedSuccessList.map(({ _tempImportId, ...rest }) => rest);
+        await batchImportAddresses(cleanedList, { force: true });
       }
 
       if (stagedOverwritesList.length > 0) {
         for (const item of stagedOverwritesList) {
           try {
-            await updateAddress(item.existingId, item.importedItem);
+            const { _tempImportId, ...cleanItem } = item.importedItem || {};
+            await updateAddress(item.existingId, cleanItem);
           } catch (e) {
             console.error('Error updating existing address:', e);
           }
@@ -744,12 +868,15 @@ export function ImportPage({ onNavigate, onStatsChange }) {
       setIsFinalSaved(true);
       if (onStatsChange) onStatsChange();
       setToast({
-        message: `🎉 Successfully saved ${totalToSave} address(es) to your Dataset!`,
+        message: `🎉 Successfully saved ${totalToSave} address(es)!`,
         type: 'success'
       });
+      if (onNavigate) {
+        onNavigate('addresses');
+      }
     } catch (err) {
       console.error('Final commit error:', err);
-      setToast({ message: err.message || 'Failed to save addresses to dataset', type: 'error' });
+      setToast({ message: err.message || 'Failed to save addresses', type: 'error' });
     } finally {
       setIsSavingFinal(false);
     }
@@ -762,7 +889,7 @@ export function ImportPage({ onNavigate, onStatsChange }) {
       <div className="card import-main-card">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
           <div>
-            <h2 style={{ fontSize: '1.4rem', marginBottom: '0.25rem' }}>Import & Preview Address Dataset</h2>
+            <h2 style={{ fontSize: '1.4rem', marginBottom: '0.25rem' }}>Import & Preview Addresses</h2>
             <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
               Upload PDF documents or CSV files, preview and edit extracted records, then save cleanly.
             </p>
@@ -857,10 +984,10 @@ export function ImportPage({ onNavigate, onStatsChange }) {
 
         {/* Parsing / Analysis Loader */}
         {(isParsing || isCheckingDuplicates) && (
-          <PageLoader 
-            message={isCheckingDuplicates ? "Scanning & checking dataset for duplicates..." : "Extracting address records..."} 
-            subMessage="Analyzing addresses against database records" 
-            minHeight="240px" 
+          <PageLoader
+            message={isCheckingDuplicates ? "Scanning & checking records for duplicates..." : "Extracting address records..."}
+            subMessage="Analyzing addresses against database records"
+            minHeight="240px"
             icon={Upload}
           />
         )}
@@ -980,7 +1107,7 @@ export function ImportPage({ onNavigate, onStatsChange }) {
           <div className="import-container-card">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.35rem' }}>
               <span style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                {isFinalSaved ? '🎉 Import Staging Saved to Dataset' : 'Address Staging & Duplicate Review'}
+                {isFinalSaved ? '🎉 Import Staging Saved' : 'Address Staging & Duplicate Review'}
               </span>
               <span style={{ fontSize: '0.85rem', fontWeight: 700, color: isFinalSaved ? '#10b981' : '#4f46e5' }}>
                 {isFinalSaved ? '100% SAVED' : 'READY TO CONFIRM'}
@@ -1032,7 +1159,7 @@ export function ImportPage({ onNavigate, onStatsChange }) {
                   {totalHeldInSuccess.toLocaleString()}
                 </div>
                 <div style={{ fontSize: '0.7rem', color: '#166534', marginTop: '2px' }}>
-                  {isFinalSaved ? 'Saved in Dataset' : 'Ready to Save'}
+                  {isFinalSaved ? 'Saved' : 'Ready to Save'}
                 </div>
               </div>
 
@@ -1588,9 +1715,67 @@ export function ImportPage({ onNavigate, onStatsChange }) {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                     {currentDupChunk.map((pair, localIdx) => {
                       const globalIdx = dupStartIndex + localIdx;
+                      const isUidMatch = Boolean(
+                        pair.importedItem?.u_id &&
+                        pair.existingAddress?.u_id &&
+                        pair.importedItem.u_id.trim().toLowerCase() === pair.existingAddress.u_id.trim().toLowerCase()
+                      );
+                      const isPhoneMatch = Boolean(
+                        pair.importedItem?.phone &&
+                        pair.existingAddress?.phone &&
+                        pair.importedItem.phone.trim() === pair.existingAddress.phone.trim()
+                      );
+                      const isNameMatch = Boolean(
+                        pair.importedItem?.name &&
+                        pair.existingAddress?.name &&
+                        pair.importedItem.name.trim().toLowerCase() === pair.existingAddress.name.trim().toLowerCase()
+                      );
+
                       return (
-                        <div key={globalIdx} className="import-dup-pair-card">
-                          {/* Column 1: New Imported Address (Duplicate) */}
+                        <div key={globalIdx} className="import-dup-pair-card" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '1rem', alignItems: 'start' }}>
+                          {/* Match Reason Header Banner - Spans Full Width (both columns) */}
+                          <div style={{
+                            gridColumn: '1 / -1',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            flexWrap: 'wrap',
+                            gap: '0.5rem',
+                            padding: '7px 12px',
+                            borderRadius: '0.5rem',
+                            backgroundColor: '#fffbeb',
+                            border: '1.5px solid #fde68a'
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.825rem', fontWeight: 700, color: '#92400e', flexWrap: 'wrap' }}>
+                              <AlertCircle size={16} color="#d97706" style={{ flexShrink: 0 }} />
+                              <span>Duplicate Reason:</span>
+                              <span style={{
+                                backgroundColor: '#fef3c7',
+                                color: '#b45309',
+                                padding: '2px 8px',
+                                borderRadius: '4px',
+                                border: '1px solid #fcd34d',
+                                fontWeight: 800,
+                                fontSize: '0.825rem'
+                              }}>
+                                {getDuplicateReason(pair)}
+                              </span>
+                            </div>
+
+                            <span style={{
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              color: pair.isEarlierInBatch ? '#b45309' : '#15803d',
+                              backgroundColor: pair.isEarlierInBatch ? '#fff7ed' : '#f0fdf4',
+                              padding: '3px 8px',
+                              borderRadius: '4px',
+                              border: pair.isEarlierInBatch ? '1px solid #fed7aa' : '1px solid #bbf7d0'
+                            }}>
+                              {pair.isEarlierInBatch ? '⚠️ Earlier Record in this Upload' : '🌐 Stored in Database'}
+                            </span>
+                          </div>
+
+                          {/* Column 1: New Imported Address (Duplicate) - LEFT */}
                           <div className="import-dup-col import-dup-col-duplicate">
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.25rem' }}>
                               <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#b91c1c', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
@@ -1601,12 +1786,23 @@ export function ImportPage({ onNavigate, onStatsChange }) {
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                               <div>
-                                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Name *</label>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
+                                  <label style={{ fontSize: '0.75rem', color: isNameMatch ? '#dc2626' : 'var(--text-muted)', fontWeight: isNameMatch ? 800 : 600 }}>Name *</label>
+                                  {isNameMatch && <span style={{ fontSize: '0.68rem', color: '#dc2626', fontWeight: 800 }}>★ Matched Name</span>}
+                                </div>
                                 <input
                                   type="text"
                                   value={pair.importedItem.name}
                                   onChange={(e) => handleDuplicateItemEdit(globalIdx, 'name', e.target.value)}
-                                  style={{ width: '100%', padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--border-color)', backgroundColor: '#ffffff', fontSize: '0.85rem' }}
+                                  style={{
+                                    width: '100%',
+                                    padding: '4px 8px',
+                                    borderRadius: '4px',
+                                    border: isNameMatch ? '2px solid #ef4444' : '1px solid var(--border-color)',
+                                    backgroundColor: isNameMatch ? '#fef2f2' : '#ffffff',
+                                    fontSize: '0.85rem',
+                                    fontWeight: 600
+                                  }}
                                 />
                               </div>
 
@@ -1641,14 +1837,48 @@ export function ImportPage({ onNavigate, onStatsChange }) {
                                 </div>
                               </div>
 
-                              <div>
-                                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Phone</label>
-                                <input
-                                  type="text"
-                                  value={pair.importedItem.phone}
-                                  onChange={(e) => handleDuplicateItemEdit(globalIdx, 'phone', e.target.value)}
-                                  style={{ width: '100%', padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--border-color)', backgroundColor: '#ffffff', fontSize: '0.85rem' }}
-                                />
+                              <div className="import-form-row-2">
+                                <div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
+                                    <label style={{ fontSize: '0.75rem', color: isPhoneMatch ? '#dc2626' : 'var(--text-muted)', fontWeight: isPhoneMatch ? 800 : 600 }}>Phone</label>
+                                    {isPhoneMatch && <span style={{ fontSize: '0.68rem', color: '#dc2626', fontWeight: 800 }}>★ Matched</span>}
+                                  </div>
+                                  <input
+                                    type="text"
+                                    value={pair.importedItem.phone || ''}
+                                    onChange={(e) => handleDuplicateItemEdit(globalIdx, 'phone', e.target.value)}
+                                    style={{
+                                      width: '100%',
+                                      padding: '4px 8px',
+                                      borderRadius: '4px',
+                                      border: isPhoneMatch ? '2px solid #ef4444' : '1px solid var(--border-color)',
+                                      backgroundColor: isPhoneMatch ? '#fef2f2' : '#ffffff',
+                                      fontSize: '0.85rem'
+                                    }}
+                                  />
+                                </div>
+                                <div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
+                                    <label style={{ fontSize: '0.75rem', color: isUidMatch ? '#dc2626' : 'var(--text-muted)', fontWeight: isUidMatch ? 800 : 600 }}>U.Id</label>
+                                    {isUidMatch && <span style={{ fontSize: '0.68rem', color: '#dc2626', fontWeight: 800 }}>★ Matched</span>}
+                                  </div>
+                                  <input
+                                    type="text"
+                                    placeholder="T-0001"
+                                    value={pair.importedItem.u_id || ''}
+                                    onChange={(e) => handleDuplicateItemEdit(globalIdx, 'u_id', e.target.value)}
+                                    style={{
+                                      width: '100%',
+                                      padding: '4px 8px',
+                                      borderRadius: '4px',
+                                      border: isUidMatch ? '2px solid #ef4444' : '1px solid var(--border-color)',
+                                      backgroundColor: isUidMatch ? '#fef2f2' : '#ffffff',
+                                      fontSize: '0.85rem',
+                                      fontWeight: 600,
+                                      color: isUidMatch ? '#b91c1c' : '#4f46e5'
+                                    }}
+                                  />
+                                </div>
                               </div>
                             </div>
 
@@ -1658,11 +1888,11 @@ export function ImportPage({ onNavigate, onStatsChange }) {
                                 onClick={() => handleSaveDuplicateAsNew(globalIdx)}
                                 className="btn btn-primary btn-sm"
                                 style={{ fontSize: '0.75rem', padding: '6px 10px', flex: 1, minWidth: '95px' }}
-                                title="Save this imported item as a new address in dataset"
+                                title="Save this imported item as a new address"
                               >
                                 <CheckCircle2 size={13} /> Save as New
                               </button>
-                              
+
                               <button
                                 onClick={() => handleUpdateExistingWithImported(globalIdx)}
                                 className="btn btn-secondary btn-sm"
@@ -1683,19 +1913,31 @@ export function ImportPage({ onNavigate, onStatsChange }) {
                             </div>
                           </div>
 
-                          {/* Column 2: Existing Saved Address */}
+                          {/* Column 2: Existing Saved Address - RIGHT */}
                           <div className="import-dup-col import-dup-col-existing">
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.25rem' }}>
                               <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                                 Existing Saved Address
                               </span>
-                              <span className="badge" style={{ fontSize: '0.7rem', backgroundColor: '#dcfce7', color: '#166534', border: '1px solid #86efac' }}>Currently Stored</span>
+                              <span className="badge" style={{
+                                fontSize: '0.7rem',
+                                backgroundColor: pair.isEarlierInBatch ? '#fff7ed' : '#dcfce7',
+                                color: pair.isEarlierInBatch ? '#9a3412' : '#166534',
+                                border: pair.isEarlierInBatch ? '1px solid #fdba74' : '1px solid #86efac'
+                              }}>
+                                {pair.isEarlierInBatch ? 'Earlier in this File' : 'Currently Stored in Database'}
+                              </span>
                             </div>
 
                             {pair.existingAddress ? (
                               <div style={{ fontSize: '0.85rem' }}>
-                                <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
-                                  {pair.existingAddress.name}
+                                <div style={{
+                                  fontWeight: 700,
+                                  fontSize: '0.95rem',
+                                  color: isNameMatch ? '#dc2626' : 'var(--text-primary)',
+                                  marginBottom: '0.25rem'
+                                }}>
+                                  {pair.existingAddress.name} {isNameMatch && <span style={{ fontSize: '0.725rem', color: '#dc2626', fontWeight: 600 }}>(Matched Name)</span>}
                                 </div>
                                 <div style={{ color: 'var(--text-secondary)', marginBottom: '0.5rem', lineHeight: 1.4 }}>
                                   {[pair.existingAddress.door_no, pair.existingAddress.address_line_1, pair.existingAddress.area, pair.existingAddress.city].filter(Boolean).join(', ')}
@@ -1705,14 +1947,30 @@ export function ImportPage({ onNavigate, onStatsChange }) {
                                   {pair.existingAddress.district && <span className="badge badge-info">{pair.existingAddress.district}</span>}
                                   {pair.existingAddress.pincode && <span className="badge badge-primary">{pair.existingAddress.pincode}</span>}
                                   {pair.existingAddress.phone && (
-                                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                                      📞 {pair.existingAddress.phone}
+                                    <span style={{
+                                      fontSize: '0.8rem',
+                                      color: isPhoneMatch ? '#dc2626' : 'var(--text-muted)',
+                                      fontWeight: isPhoneMatch ? 700 : 400
+                                    }}>
+                                      📞 {pair.existingAddress.phone} {isPhoneMatch && '(Matched)'}
                                     </span>
                                   )}
                                 </div>
                                 {pair.existingAddress.u_id && (
-                                  <div style={{ fontSize: '0.75rem', color: '#4f46e5', fontWeight: 600, marginTop: '0.5rem' }}>
-                                    Ref U.ID: {pair.existingAddress.u_id}
+                                  <div style={{
+                                    fontSize: '0.78rem',
+                                    fontWeight: 700,
+                                    marginTop: '0.65rem',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '5px',
+                                    padding: '3px 8px',
+                                    borderRadius: '4px',
+                                    backgroundColor: isUidMatch ? '#fef2f2' : 'rgba(79, 70, 229, 0.08)',
+                                    color: isUidMatch ? '#dc2626' : '#4f46e5',
+                                    border: isUidMatch ? '1.5px solid #ef4444' : '1px solid rgba(79, 70, 229, 0.2)'
+                                  }}>
+                                    Ref U.ID: {pair.existingAddress.u_id} {isUidMatch && '★ Matched Duplicate'}
                                   </div>
                                 )}
                               </div>
@@ -1791,11 +2049,11 @@ export function ImportPage({ onNavigate, onStatsChange }) {
                 >
                   {isFinalSaved ? (
                     <>
-                      <Check size={17} /> All ({totalHeldInSuccess}) Addresses Saved to Dataset
+                      <Check size={17} /> All ({totalHeldInSuccess}) Addresses Saved
                     </>
                   ) : isSavingFinal ? (
                     <>
-                      Saving ({totalHeldInSuccess}) Addresses to Dataset...
+                      Saving ({totalHeldInSuccess}) Addresses...
                     </>
                   ) : (
                     <>

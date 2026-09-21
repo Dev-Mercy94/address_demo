@@ -33,7 +33,7 @@
 
   --font-sans: 'Inter', 'Noto Sans Tamil', 'Mukta Malar', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-heading: 'Outfit', 'Noto Sans Tamil', 'Inter', sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
+  --font-mono: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace;
 }
 
 [data-theme='dark'] {
@@ -306,8 +306,13 @@ h6 {
 }
 
 @keyframes tableShimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 .skeleton-line {
@@ -949,7 +954,7 @@ h6 {
   display: none !important;
 }
 
-.header-dataset-label {
+.header-total-label {
   display: inline !important;
 }
 
@@ -972,7 +977,7 @@ h6 {
     font-size: 1.05rem !important;
   }
 
-  .header-dataset-label {
+  .header-total-label {
     display: none !important;
   }
 
@@ -2339,6 +2344,7 @@ h6 {
 
 /* Tablet-only subscription compact layout (481px – 768px) */
 @media (min-width: 481px) and (max-width: 768px) {
+
   /* Page header: title + button in one row */
   .sub-page-header {
     flex-wrap: nowrap !important;
@@ -2347,7 +2353,7 @@ h6 {
     margin-bottom: 0.85rem !important;
   }
 
-  .sub-page-header > div:first-child {
+  .sub-page-header>div:first-child {
     flex: 1 1 0 !important;
     min-width: 0 !important;
   }
@@ -2425,6 +2431,7 @@ h6 {
   .mobile-tab-label {
     display: inline !important;
   }
+
   .desktop-tab-label {
     display: none !important;
   }
@@ -2462,7 +2469,7 @@ h6 {
     margin-bottom: 1.25rem !important;
   }
 
-  .dashboard-welcome-card > div {
+  .dashboard-welcome-card>div {
     gap: 1rem !important;
   }
 
@@ -2509,32 +2516,39 @@ h6 {
   .mobile-tab-label {
     display: inline;
   }
+
   .desktop-tab-label {
     display: none;
   }
+
   .subscription-filter-card,
   .subscription-secondary-filter-card {
     flex-direction: column;
     align-items: stretch;
     gap: 0.65rem;
   }
+
   .subscription-uid-box,
   .subscription-input-box {
     min-width: 100%;
     max-width: 100%;
   }
+
   .subscription-uid-wrapper {
     width: 100% !important;
     display: block !important;
   }
+
   .subscription-uid-wrapper .subscription-uid-box {
     width: 100% !important;
     max-width: 100% !important;
     min-width: 100% !important;
   }
+
   .action-btn-add {
     display: flex !important;
   }
+
   .subscription-view-toggle {
     margin-left: 0;
     justify-content: flex-end;
@@ -2811,6 +2825,7 @@ h6 {
     border-radius: 0.45rem !important;
     flex-shrink: 0 !important;
   }
+
   .export-page-icon svg {
     width: 16px !important;
     height: 16px !important;
@@ -2824,6 +2839,7 @@ h6 {
     border-radius: 0.35rem !important;
     flex-shrink: 0 !important;
   }
+
   .export-page-icon svg {
     width: 13px !important;
     height: 13px !important;
@@ -2832,7 +2848,12 @@ h6 {
 
 /* Tablet & Mobile Screens (<= 768px) */
 @media (max-width: 768px) {
-  html, body, .app-container, .main-content, .page-container {
+
+  html,
+  body,
+  .app-container,
+  .main-content,
+  .page-container {
     max-width: 100vw !important;
     overflow-x: hidden !important;
   }
@@ -2846,7 +2867,7 @@ h6 {
   .import-dup-pair-card,
   .import-dup-col,
   .import-form-row-2,
-  .import-form-row-2 > div {
+  .import-form-row-2>div {
     min-width: 0 !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
@@ -2882,12 +2903,8 @@ h6 {
   }
 
   .import-dup-pair-card {
-    grid-template-columns: 1fr !important;
-    background: transparent !important;
-    border: none !important;
-    padding: 0 !important;
-    margin: 0.5rem 0 !important;
-    gap: 0.65rem !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0.75rem !important;
   }
 
   .import-staged-grid {
@@ -3013,11 +3030,11 @@ h6 {
     margin-bottom: 0.75rem !important;
   }
 
-  .import-counters-grid > div {
+  .import-counters-grid>div {
     padding: 0.5rem 0.35rem !important;
   }
 
-  .import-counters-grid > div:last-child:nth-child(odd) {
+  .import-counters-grid>div:last-child:nth-child(odd) {
     grid-column: 1 / -1 !important;
   }
 
@@ -3379,9 +3396,11 @@ h6 {
   .overview-footer-creator-stamp {
     padding: 0.75rem 0.85rem;
   }
+
   .overview-footer-inner-group {
     gap: 0.65rem;
   }
+
   .overview-footer-brand-row {
     font-size: 0.825rem;
     gap: 0.35rem;
@@ -3392,16 +3411,19 @@ h6 {
   .overview-footer-creator-stamp {
     padding: 0.65rem 0.5rem;
   }
+
   .overview-footer-inner-group {
     flex-direction: column;
     align-items: center;
     gap: 0.45rem;
   }
+
   .overview-footer-brand-row {
     flex-direction: column;
     align-items: center;
     gap: 0.25rem;
   }
+
   .overview-footer-dot {
     display: none;
   }
@@ -3414,9 +3436,11 @@ h6 {
     align-items: stretch;
     gap: 1rem;
   }
+
   .overview-creator-actions {
     width: 100%;
   }
+
   .overview-creator-actions a {
     flex: 1 1 auto;
     justify-content: center;

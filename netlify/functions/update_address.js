@@ -40,6 +40,16 @@ export async function handler(event, context) {
     delete updates.created_at;
     updates.updated_at = now;
 
+    if (updates.name && typeof updates.name === 'string') {
+      updates.name = updates.name
+        .replace(/(?:Cell|Mobile|Ph|Mob|Tel|Phone)[\s\:\.\-]*\+?\d[\d\s\-]*/gi, '')
+        .replace(/(?:\+?91[\s-]?)?[6-9]\d{4}[\s-]?\d{5}/g, '')
+        .replace(/(?:\+?91[\s-]?)?[6-9]\d{9}/g, '')
+        .replace(/\b\d{10}\b/g, '')
+        .replace(/\b(Cell|Mobile|Phone|Tel|Mob)\b/gi, '')
+        .trim();
+    }
+
     const { db } = await getDb();
     const collection = db.collection('addresses');
 

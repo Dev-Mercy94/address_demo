@@ -4,15 +4,15 @@ import { Pagination } from '../components/Pagination';
 import { Toast } from '../components/Toast';
 import { PageLoader } from '../components/PageLoader';
 import { updateAddress } from '../services/apiService';
-import { 
-  CheckSquare, 
-  Square, 
-  Sparkles, 
-  Calendar, 
-  Clock, 
-  User, 
+import {
+  CheckSquare,
+  Square,
+  Sparkles,
+  Calendar,
+  Clock,
+  User,
   X,
-  CheckCircle2, 
+  CheckCircle2,
   XCircle,
   Filter,
   Hash,
@@ -22,7 +22,9 @@ import {
   Eye,
   Edit3,
   MapPin,
-  Phone
+  Phone,
+  MessageCircle,
+  MessageSquare
 } from 'lucide-react';
 
 export function SubscriptionPage({ onNavigate, onEditAddress, onStatsChange }) {
@@ -64,7 +66,7 @@ export function SubscriptionPage({ onNavigate, onEditAddress, onStatsChange }) {
 
     return addresses.filter(item => {
       const isSub = Boolean(item.subscription);
-      
+
       // Tab filter
       if (activeTab === 'SUBSCRIBED' && !isSub) return false;
       if (activeTab === 'UNSUBSCRIBED' && isSub) return false;
@@ -108,7 +110,7 @@ export function SubscriptionPage({ onNavigate, onEditAddress, onStatsChange }) {
 
   const handleQuickSubscribe = async (record, e) => {
     if (e) e.stopPropagation();
-    
+
     const now = new Date();
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const dateStr = `${String(now.getDate()).padStart(2, '0')}-${months[now.getMonth()]}-${now.getFullYear()}`;
@@ -139,11 +141,42 @@ export function SubscriptionPage({ onNavigate, onEditAddress, onStatsChange }) {
     }
   };
 
+  const handleWhatsAppMessage = (record, e) => {
+    if (e) e.stopPropagation();
+    if (!record.phone) {
+      setToast({ message: 'No phone number available for this contact', type: 'error' });
+      return;
+    }
+
+    const amountVal = record.subscription ? (record.subscription_amount || 500) : 0;
+    const message = `Hello, we have received your subscription payment of ₹${amountVal}. Thank you!`;
+
+    const phoneNum = record.phone.replace(/\D/g, '');
+    const finalPhone = phoneNum.length === 10 ? `91${phoneNum}` : phoneNum;
+
+    window.open(`https://wa.me/${finalPhone}?text=${encodeURIComponent(message)}`, '_blank');
+  };
+
+  const handleSmsMessage = (record, e) => {
+    if (e) e.stopPropagation();
+    if (!record.phone) {
+      setToast({ message: 'No phone number available for this contact', type: 'error' });
+      return;
+    }
+
+    const amountVal = record.subscription ? (record.subscription_amount || 500) : 0;
+    const message = `Hello, we have received your subscription payment of ₹${amountVal}. Thank you!`;
+
+    const phoneNum = record.phone.replace(/\D/g, '');
+
+    window.open(`sms:${phoneNum}?body=${encodeURIComponent(message)}`, '_self');
+  };
+
   if (initialLoading && (!addresses || addresses.length === 0)) {
     return (
-      <PageLoader 
-        message="Loading subscription records..." 
-        subMessage="Tracking subscriber status and renewal schedules" 
+      <PageLoader
+        message="Loading subscription records..."
+        subMessage="Tracking subscriber status and renewal schedules"
         icon={CheckSquare}
       />
     );
@@ -456,10 +489,10 @@ export function SubscriptionPage({ onNavigate, onEditAddress, onStatsChange }) {
 
       {/* Main Content: Table or Cards Grid */}
       {loading ? (
-        <PageLoader 
-          message="Loading subscription records..." 
-          subMessage="Tracking subscriber status and renewal schedules" 
-          minHeight="340px" 
+        <PageLoader
+          message="Loading subscription records..."
+          subMessage="Tracking subscriber status and renewal schedules"
+          minHeight="340px"
           icon={CheckSquare}
         />
       ) : filteredAddresses.length === 0 ? (
@@ -467,11 +500,11 @@ export function SubscriptionPage({ onNavigate, onEditAddress, onStatsChange }) {
           <Filter size={36} style={{ marginBottom: '0.75rem', opacity: 0.5, color: '#2563eb' }} />
           <h3 style={{ fontSize: '1.1rem', color: 'var(--text-primary)', fontWeight: 700 }}>No Subscription Records Found</h3>
           <p style={{ fontSize: '0.875rem', marginTop: '0.25rem', color: 'var(--text-muted)' }}>
-            {activeTab === 'UNSUBSCRIBED' 
-              ? 'All directory contacts are currently subscribed!' 
-              : activeTab === 'SUBSCRIBED' 
-              ? 'No subscribed addresses found for the selected date/amount.'
-              : 'Try adjusting your Date or Amount filter.'}
+            {activeTab === 'UNSUBSCRIBED'
+              ? 'All directory contacts are currently subscribed!'
+              : activeTab === 'SUBSCRIBED'
+                ? 'No subscribed addresses found for the selected date/amount.'
+                : 'Try adjusting your Date or Amount filter.'}
           </p>
         </div>
       ) : viewMode === 'cards' ? (
@@ -525,7 +558,9 @@ export function SubscriptionPage({ onNavigate, onEditAddress, onStatsChange }) {
                     borderRadius: '4px',
                     backgroundColor: 'rgba(37, 99, 235, 0.15)',
                     color: '#2563eb',
-                    fontFamily: 'var(--font-mono)'
+                    fontFamily: 'var(--font-sans)',
+                    fontVariantNumeric: 'tabular-nums',
+                    fontFeatureSettings: '"zero" 0'
                   }}>
                     {record.u_id || 'ID'}
                   </span>
@@ -641,7 +676,26 @@ export function SubscriptionPage({ onNavigate, onEditAddress, onStatsChange }) {
                     title="View Full Details"
                   >
                     <Eye size={14} />
-                    <span>View</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={(e) => handleWhatsAppMessage(record, e)}
+                    className="btn btn-secondary btn-sm"
+                    style={{ padding: '0.4rem 0.6rem', fontSize: '0.78rem', color: '#10b981', borderColor: 'rgba(16, 185, 129, 0.3)' }}
+                    title="WhatsApp"
+                  >
+                    <MessageCircle size={14} />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={(e) => handleSmsMessage(record, e)}
+                    className="btn btn-secondary btn-sm"
+                    style={{ padding: '0.4rem 0.6rem', fontSize: '0.78rem', color: '#3b82f6', borderColor: 'rgba(59, 130, 246, 0.3)' }}
+                    title="SMS"
+                  >
+                    <MessageSquare size={14} />
                   </button>
 
                   <button
@@ -652,7 +706,6 @@ export function SubscriptionPage({ onNavigate, onEditAddress, onStatsChange }) {
                     title="Edit Address"
                   >
                     <Edit3 size={14} />
-                    <span>Edit</span>
                   </button>
                 </div>
               </div>
@@ -719,7 +772,10 @@ export function SubscriptionPage({ onNavigate, onEditAddress, onStatsChange }) {
                           borderRadius: '4px',
                           backgroundColor: 'rgba(37, 99, 235, 0.18)',
                           color: '#3b82f6',
-                          fontFamily: 'var(--font-mono)',
+                          fontFamily: 'var(--font-sans)',
+                          fontVariantNumeric: 'tabular-nums',
+                          fontFeatureSettings: '"zero" 0',
+                          fontWeight: 700,
                           whiteSpace: 'nowrap',
                           display: 'inline-block',
                           letterSpacing: '0.5px'
@@ -787,6 +843,24 @@ export function SubscriptionPage({ onNavigate, onEditAddress, onStatsChange }) {
                             title="View Details"
                           >
                             <Eye size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => handleWhatsAppMessage(record, e)}
+                            className="btn btn-secondary btn-icon"
+                            style={{ padding: '0.3rem', borderRadius: '0.35rem', color: '#10b981' }}
+                            title="Send WhatsApp"
+                          >
+                            <MessageCircle size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => handleSmsMessage(record, e)}
+                            className="btn btn-secondary btn-icon"
+                            style={{ padding: '0.3rem', borderRadius: '0.35rem', color: '#3b82f6' }}
+                            title="Send SMS"
+                          >
+                            <MessageSquare size={13} />
                           </button>
                           <button
                             type="button"

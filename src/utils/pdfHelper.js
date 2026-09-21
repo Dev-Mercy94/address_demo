@@ -1137,7 +1137,15 @@ export function parseSingleBoxToAddress(boxContent, fileName = 'Imported PDF') {
 
   return {
     u_id: uId,
-    name: name.replace(/[,;]/g, '').trim().substring(0, 70),
+    name: name
+      .replace(/(?:Cell|Mobile|Ph|Mob|Tel|Phone)[\s\:\.\-]*\+?\d[\d\s\-]*/gi, '')
+      .replace(/(?:\+?91[\s-]?)?[6-9]\d{4}[\s-]?\d{5}/g, '')
+      .replace(/(?:\+?91[\s-]?)?[6-9]\d{9}/g, '')
+      .replace(/\b\d{10}\b/g, '')
+      .replace(/\b(Cell|Mobile|Phone|Tel|Mob)\b/gi, '')
+      .replace(/[,;]/g, '')
+      .trim()
+      .substring(0, 70),
     door_no: doorNo,
     address_line_1: fullAddress.substring(0, 160),
     address_line_2: '',
@@ -1148,7 +1156,7 @@ export function parseSingleBoxToAddress(boxContent, fileName = 'Imported PDF') {
     country: 'India',
     pincode: pincode,
     phone: phone,
-    landmark: 'Imported from Tamil Box Label Sheet',
+    landmark: '',
     notes: relation ? `Relation: ${relation}` : `Imported from ${fileName}`
   };
 }
@@ -1419,7 +1427,7 @@ function processOriginalExtractedRows(rows, fileName) {
       country: 'India',
       pincode,
       phone,
-      landmark: 'Uploaded from Device PDF Table',
+      landmark: '',
       notes: `Imported from ${fileName}`
     });
   }
@@ -1908,7 +1916,7 @@ function parseUnstructuredBlocks(fullText, fileName) {
         country: 'India',
         pincode: pincode,
         phone: phone,
-        landmark: 'Extracted from Tamil Directory Format',
+        landmark: '',
       });
     } else if (results.length > 0 && (phone || fullAddressLine)) {
       // If this block has no name but has a phone number or address fragment, attach it to the PREVIOUS record instead of creating a dummy ghost record!
@@ -2018,7 +2026,7 @@ function parseSingleLineTableRows(fullText, fileName) {
       country: 'India',
       pincode: pincode,
       phone: phone,
-      landmark: 'Uploaded from Table Document',
+      landmark: '',
       notes: `Imported from ${fileName}`
     });
   }
@@ -2302,7 +2310,7 @@ function processDocxTableRows(extractedRows, fileName) {
       country: 'India',
       pincode: pincode,
       phone: phone,
-      landmark: u_id ? `U.Id: ${u_id}` : 'WordPad / DOCX Table Record',
+      landmark: '',
       notes: `Imported from ${fileName}`
     });
   }

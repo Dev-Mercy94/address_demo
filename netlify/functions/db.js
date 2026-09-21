@@ -1,4 +1,12 @@
 import { MongoClient, ObjectId } from 'mongodb';
+import dns from 'node:dns';
+
+// Fix querySrv ECONNREFUSED on Windows / router DNS servers by using reliable public DNS resolvers
+try {
+  dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1']);
+} catch (err) {
+  // Ignore if restricted in specific environment
+}
 
 let cachedClient = null;
 let cachedDb = null;
@@ -50,9 +58,10 @@ export async function getDb() {
   }
 
   const client = new MongoClient(uri, {
-    connectTimeoutMS: 8000,
+    connectTimeoutMS: 10000,
     serverSelectionTimeoutMS: 5000,
-    maxPoolSize: 20
+    maxPoolSize: 20,
+    family: 4 // Force IPv4 to prevent 1-minute IPv6 fallback delays on Windows
   });
 
   await client.connect();

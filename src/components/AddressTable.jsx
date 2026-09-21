@@ -30,7 +30,18 @@ const AddressTableRow = memo(function AddressTableRow({
     }
   }, [isEditing, addr]);
 
-  const onEditChange = (field, val) => setLocalFormData(prev => ({ ...prev, [field]: val }));
+  const onEditChange = (field, val) => {
+    let cleanVal = val;
+    if (field === 'name' && typeof cleanVal === 'string') {
+      cleanVal = cleanVal
+        .replace(/(?:Cell|Mobile|Ph|Mob|Tel|Phone)[\s\:\.\-]*\+?\d[\d\s\-]*/gi, '')
+        .replace(/(?:\+?91[\s-]?)?[6-9]\d{4}[\s-]?\d{5}/g, '')
+        .replace(/(?:\+?91[\s-]?)?[6-9]\d{9}/g, '')
+        .replace(/\b\d{10}\b/g, '')
+        .replace(/\b(Cell|Mobile|Phone|Tel|Mob)\b/gi, '');
+    }
+    setLocalFormData(prev => ({ ...prev, [field]: cleanVal }));
+  };
 
   const serialNo = (page - 1) * limit + index + 1;
 
@@ -50,12 +61,15 @@ const AddressTableRow = memo(function AddressTableRow({
       {/* U.Id */}
       <td style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>
         <span style={{
-          fontSize: '0.8rem',
+          fontSize: '0.82rem',
           padding: '4px 8px',
           borderRadius: '4px',
           backgroundColor: 'rgba(37, 99, 235, 0.12)',
           color: '#1d4ed8',
-          fontFamily: 'var(--font-mono)',
+          fontFamily: 'var(--font-sans)',
+          fontVariantNumeric: 'tabular-nums',
+          fontFeatureSettings: '"zero" 0',
+          fontWeight: 700,
           whiteSpace: 'nowrap',
           display: 'inline-block',
           letterSpacing: '0.5px'

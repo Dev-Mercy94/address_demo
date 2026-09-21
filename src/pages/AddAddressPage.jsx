@@ -2,20 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { createAddress, updateAddress, checkDuplicateAddress } from '../services/apiService';
 import { DuplicateModal } from '../components/DuplicateModal';
 import { Toast } from '../components/Toast';
-import { 
-  Save, 
-  Plus, 
-  ArrowLeft, 
-  User, 
-  MapPin, 
-  Phone, 
-  FileText, 
-  Compass, 
-  CheckSquare, 
-  Square, 
-  IndianRupee, 
-  Calendar, 
-  Clock, 
+import {
+  Save,
+  Plus,
+  ArrowLeft,
+  User,
+  MapPin,
+  Phone,
+  FileText,
+  Compass,
+  CheckSquare,
+  Square,
+  IndianRupee,
+  Calendar,
+  Clock,
   Sparkles,
   Building,
   CheckCircle2
@@ -47,6 +47,7 @@ export function AddAddressPage({ initialData = null, onNavigate, onComplete, onS
     country: 'India',
     pincode: '',
     phone: '',
+    alt_phone: '',
     landmark: '',
     notes: '',
     subscription: false,
@@ -76,6 +77,7 @@ export function AddAddressPage({ initialData = null, onNavigate, onComplete, onS
         country: initialData.country || 'India',
         pincode: initialData.pincode || '',
         phone: initialData.phone || '',
+        alt_phone: initialData.alt_phone || '',
         landmark: initialData.landmark || '',
         notes: initialData.notes || '',
         subscription: Boolean(initialData.subscription),
@@ -86,9 +88,29 @@ export function AddAddressPage({ initialData = null, onNavigate, onComplete, onS
     }
   }, [initialData]);
 
+  const cleanNameInput = (val) => {
+    if (!val || typeof val !== 'string') return '';
+    return val
+      .replace(/(?:Cell|Mobile|Ph|Mob|Tel|Phone)[\s\:\.\-]*\+?\d[\d\s\-]*/gi, '')
+      .replace(/(?:\+?91[\s-]?)?[6-9]\d{4}[\s-]?\d{5}/g, '')
+      .replace(/(?:\+?91[\s-]?)?[6-9]\d{9}/g, '')
+      .replace(/\b\d{10}\b/g, '')
+      .replace(/\b(Cell|Mobile|Phone|Tel|Mob)\b/gi, '');
+  };
+
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    let { name, value } = e.target;
+    if (name === 'name') {
+      value = cleanNameInput(value).trimStart();
+    }
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleNameBlur = () => {
+    setFormData(prev => ({
+      ...prev,
+      name: cleanNameInput(prev.name).trim()
+    }));
   };
 
   const handleFormSubmit = async (e, addAnother = false) => {
@@ -141,6 +163,7 @@ export function AddAddressPage({ initialData = null, onNavigate, onComplete, onS
           country: 'India',
           pincode: '',
           phone: '',
+          alt_phone: '',
           landmark: '',
           notes: '',
           subscription: false,
@@ -219,7 +242,7 @@ export function AddAddressPage({ initialData = null, onNavigate, onComplete, onS
       </div>
 
       <form onSubmit={(e) => handleFormSubmit(e, false)} className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
-        
+
         {/* SECTION 1: Contact & Identifier Information */}
         <div style={{
           backgroundColor: 'var(--bg-secondary)',
@@ -259,6 +282,7 @@ export function AddAddressPage({ initialData = null, onNavigate, onComplete, onS
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
+                onBlur={handleNameBlur}
                 placeholder="e.g. A. Devendran / S. Priya"
                 required
                 className="form-input"
@@ -278,6 +302,23 @@ export function AddAddressPage({ initialData = null, onNavigate, onComplete, onS
                 value={formData.phone}
                 onChange={handleChange}
                 placeholder="e.g. 9876543210"
+                className="form-input"
+                style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}
+              />
+            </div>
+
+            {/* Alt Phone */}
+            <div className="form-group" style={{ margin: 0 }}>
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <Phone size={13} style={{ color: '#64748b' }} />
+                <span>Alternate Phone</span>
+              </label>
+              <input
+                type="text"
+                name="alt_phone"
+                value={formData.alt_phone}
+                onChange={handleChange}
+                placeholder="e.g. 9876543211"
                 className="form-input"
                 style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}
               />

@@ -64,7 +64,7 @@ export function Header({ activePage, setActivePage, theme, toggleTheme, totalCou
             <span className="mobile-header-title">{shortTitles[activePage] || 'AddressHub'}</span>
           </h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-            <span className="header-dataset-label">Dataset:</span>
+            <span className="header-total-label">Total:</span>
             <span style={{ color: 'var(--success)', fontWeight: 700 }}>
               {totalCount ? `${totalCount.toLocaleString()} Records` : 'Active'}
             </span>

@@ -17,7 +17,13 @@ export async function handler(event, context) {
       return jsonResponse(400, { error: 'Invalid JSON request body' });
     }
 
-    const name = (data.name || '').trim();
+    const name = (data.name || '')
+      .replace(/(?:Cell|Mobile|Ph|Mob|Tel|Phone)[\s\:\.\-]*\+?\d[\d\s\-]*/gi, '')
+      .replace(/(?:\+?91[\s-]?)?[6-9]\d{4}[\s-]?\d{5}/g, '')
+      .replace(/(?:\+?91[\s-]?)?[6-9]\d{9}/g, '')
+      .replace(/\b\d{10}\b/g, '')
+      .replace(/\b(Cell|Mobile|Phone|Tel|Mob)\b/gi, '')
+      .trim();
     const address_line_1 = (data.address_line_1 || '').trim();
     const district = (data.district || '').trim();
     const pincode = (data.pincode || '').trim();
@@ -40,6 +46,7 @@ export async function handler(event, context) {
       country: (data.country || 'India').trim(),
       pincode,
       phone: (data.phone || '').trim(),
+      alt_phone: (data.alt_phone || '').trim(),
       landmark: (data.landmark || '').trim(),
       notes: (data.notes || '').trim(),
       subscription: Boolean(data.subscription),

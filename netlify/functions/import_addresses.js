@@ -40,7 +40,7 @@ export async function handler(event, context) {
     let existingDocs = [];
     if (!forceSave) {
       try {
-        const cursor = collection.find({}, { projection: { name: 1, phone: 1, pincode: 1, address_line_1: 1, u_id: 1 } });
+        const cursor = collection.find({}, { projection: { name: 1, phone: 1, pincode: 1, address_line_1: 1, u_id: 1, district: 1 } });
         existingDocs = await cursor.toArray();
       } catch (err) {
         console.warn('Notice during duplicate check pre-fetch:', err);
@@ -84,6 +84,7 @@ export async function handler(event, context) {
 
       if (!forceSave) {
         const nameLower = name.toLowerCase();
+        const docDistrict = district.toLowerCase();
         let matchingExisting = null;
 
         for (const ex of existingDocs) {
@@ -91,6 +92,12 @@ export async function handler(event, context) {
           const exPhone = (ex.phone || '').trim();
           const exPin = (ex.pincode || '').trim();
           const exAddr1 = (ex.address_line_1 || '').trim().toLowerCase();
+          const exDistrict = (ex.district || '').trim().toLowerCase();
+
+          // If different districts, do NOT consider as duplicate
+          if (docDistrict && exDistrict && docDistrict !== exDistrict) {
+            continue;
+          }
 
           if (exName === nameLower) {
             if (phone && exPhone && phone === exPhone) {
@@ -142,24 +149,59 @@ export async function handler(event, context) {
         }
       }
 
-      for (const doc of uniqueBatch) {
-        const uid = (doc.u_id || '').trim();
-        if (uid) {
-          const existing = await collection.findOne({
-            u_id: { $regex: new RegExp(`^${escapeRegex(uid)}$`, 'i') }
-          });
-          if (existing) {
-            const docUpdate = { ...doc, updated_at: now };
-            await collection.updateOne({ _id: existing._id }, { $set: docUpdate });
-            successCount++;
-            continue;
+      // Collect all valid U.IDs to lookup existing records in one fast batch query
+      const batchUids = uniqueBatch
+        .map(d => (d.u_id || '').trim())
+        .filter(Boolean);
+
+      const existingUidMap = new Map();
+      if (batchUids.length > 0) {
+        const chunkSize = 200;
+        for (let i = 0; i < batchUids.length; i += chunkSize) {
+          const slice = batchUids.slice(i, i + chunkSize);
+          const escaped = slice.map(u => escapeRegex(u));
+          const regexFilter = new RegExp(`^(${escaped.join('|')})$`, 'i');
+          const found = await collection.find(
+            { u_id: { $regex: regexFilter } },
+            { projection: { _id: 1, u_id: 1 } }
+          ).toArray();
+          for (const rec of found) {
+            if (rec.u_id) {
+              existingUidMap.set(rec.u_id.trim().toLowerCase(), rec._id);
+            }
           }
         }
+      }
 
-        const res = await collection.insertOne(doc);
-        if (res.insertedId) {
-          successCount++;
+      // Prepare bulk operations for one-shot database execution
+      const bulkOps = [];
+      for (const doc of uniqueBatch) {
+        const uidKey = (doc.u_id || '').trim().toLowerCase();
+        const existingId = uidKey ? existingUidMap.get(uidKey) : null;
+
+        if (existingId) {
+          bulkOps.push({
+            updateOne: {
+              filter: { _id: existingId },
+              update: { $set: { ...doc, updated_at: now } }
+            }
+          });
+        } else {
+          bulkOps.push({
+            insertOne: {
+              document: doc
+            }
+          });
         }
+      }
+
+      if (bulkOps.length > 0) {
+        const bulkRes = await collection.bulkWrite(bulkOps, { ordered: false });
+        const inserted = bulkRes.insertedCount || 0;
+        const modified = bulkRes.modifiedCount || 0;
+        const upserted = bulkRes.upsertedCount || 0;
+        const matched = bulkRes.matchedCount || 0;
+        successCount = inserted + modified + upserted + Math.max(0, matched - modified);
       }
     }
 

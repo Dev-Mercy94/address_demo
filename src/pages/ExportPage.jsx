@@ -18,7 +18,7 @@ export function ExportPage() {
   });
   const [toast, setToast] = useState({ message: '', type: 'success' });
 
-  // Load complete dataset once on mount for instant reactive sorting and cascading filter options
+  // Load complete address records once on mount for instant reactive sorting and cascading filter options
   useEffect(() => {
     let isMounted = true;
     async function loadData() {
@@ -312,7 +312,7 @@ export function ExportPage() {
             <div>
               <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Export All Records</div>
               <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                Downloads complete address dataset directly as CSV or PDF
+                Downloads complete address records directly as CSV or PDF
               </div>
             </div>
           </label>

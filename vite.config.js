@@ -2,6 +2,14 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import dotenv from 'dotenv';
 import path from 'path';
+import dns from 'node:dns';
+
+// Fix querySrv ECONNREFUSED on Windows / router DNS for Netlify functions dev middleware
+try {
+  dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1']);
+} catch (err) {
+  // Ignore fallback
+}
 
 dotenv.config();
 

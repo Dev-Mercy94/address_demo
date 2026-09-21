@@ -60,7 +60,10 @@ export async function checkDuplicateAddress(addressData) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(cleanData)
   });
-  if (!res.ok) throw new Error('Failed to check duplicate');
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to check duplicate');
+  }
   return res.json();
 }
 

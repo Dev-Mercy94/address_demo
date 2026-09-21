@@ -34,11 +34,10 @@ export function AddressDetailsModal({ address, onClose, onEdit, onDelete }) {
               <h2 style={{ fontSize: '1.3rem', lineHeight: 1.2 }}>{address.name}</h2>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.2rem' }}>
                 {address.u_id && (
-                  <span style={{ fontSize: '0.78rem', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', backgroundColor: 'rgba(79, 70, 229, 0.1)', color: '#4f46e5', fontFamily: 'var(--font-mono)' }}>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', backgroundColor: 'rgba(79, 70, 229, 0.1)', color: '#4f46e5', fontFamily: 'var(--font-sans)', fontVariantNumeric: 'tabular-nums', fontFeatureSettings: '"zero" 0' }}>
                     U.Id: {address.u_id}
                   </span>
                 )}
-                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>ID: {address._id}</span>
               </div>
             </div>
           </div>
@@ -116,10 +115,19 @@ export function AddressDetailsModal({ address, onClose, onEdit, onDelete }) {
 
           <div>
             <div className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <Phone size={14} /> Alternative Number
+            </div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--text-primary)', marginTop: '0.2rem' }}>
+              {address.alt_phone || address.alternative_phone || address.secondary_phone || '-'}
+            </div>
+          </div>
+
+          <div>
+            <div className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
               <Compass size={14} /> Landmark
             </div>
             <div style={{ color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
-              {address.landmark || '-'}
+              {(address.landmark && !address.landmark.includes('Imported from') && !address.landmark.includes('Uploaded from') && !address.landmark.includes('WordPad') && !address.landmark.includes('Tamil Box Label')) ? address.landmark : '-'}
             </div>
           </div>
         </div>
