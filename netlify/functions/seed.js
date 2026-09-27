@@ -22,6 +22,11 @@ export async function handler(event, context) {
       await collection.deleteMany({});
     }
 
+    try {
+      await collection.createIndex({ addressGroup: 1 });
+      await collection.createIndex({ addressGroup: 1, name: 1 });
+    } catch (e) {}
+
     const districtsData = [
       { district: 'Chennai', state: 'Tamil Nadu', pincodes: ['600001', '600002', '600004', '600018', '600028'], cities: ['Chennai'], areas: ['Mylapore', 'Anna Nagar', 'T. Nagar', 'Velachery', 'Adyar'] },
       { district: 'Coimbatore', state: 'Tamil Nadu', pincodes: ['641001', '641002', '641004'], cities: ['Coimbatore'], areas: ['RS Puram', 'Gandhipuram', 'Peelamedu'] },
@@ -32,6 +37,7 @@ export async function handler(event, context) {
     const firstNames = ['Aarav', 'Aditi', 'Ajay', 'Anand', 'Arun', 'Bala', 'Deepak', 'Dinesh', 'Ganesh', 'Karthik', 'Kumar', 'Lakshmi', 'Meena', 'Rajesh', 'Sanjay', 'Suresh', 'Vijay', 'Vikram'];
     const lastNames = ['Kumar', 'Sharma', 'Patel', 'Subramanian', 'Raman', 'Narayanan', 'Pillai', 'Mudaliar', 'Gounder', 'Iyer', 'Reddy'];
     const streets = ['Main Street', 'Cross Street', 'Station Road', 'Bazaar Street', 'Temple Road', 'Gandhi Road', 'Nehru Salai'];
+    const groups = ['VIP', 'ADVERTISEMENT', 'HELP', 'NORMAL', 'NORMAL', 'NORMAL', 'NORMAL', 'NORMAL'];
 
     const now = new Date().toISOString();
     const docs = [];
@@ -55,6 +61,7 @@ export async function handler(event, context) {
         country: 'India',
         pincode: dObj.pincodes[i % dObj.pincodes.length],
         phone: `987${1000000 + ((i * 137) % 8999999)}`,
+        addressGroup: groups[i % groups.length],
         landmark: 'Near Bus Stand',
         notes: i % 10 === 0 ? 'Verified Address' : '',
         created_at: now,
@@ -69,3 +76,4 @@ export async function handler(event, context) {
     return jsonResponse(500, { error: err.message || 'Internal Server Error' });
   }
 }
+

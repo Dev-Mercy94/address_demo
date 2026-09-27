@@ -57,7 +57,7 @@ export async function handler(event, context) {
   try {
     const q = event.queryStringParameters || {};
     const page = Math.max(1, parseInt(q.page || '1', 10));
-    const limit = Math.min(Math.max(1, parseInt(q.limit || '50', 10)), 500);
+    const limit = Math.min(Math.max(1, parseInt(q.limit || '50', 10)), 15000);
     const skip = (page - 1) * limit;
 
     const u_id = (q.u_id || q.uId || '').trim();
@@ -68,6 +68,8 @@ export async function handler(event, context) {
     const pincode = (q.pincode || '').trim();
     const street = (q.street || '').trim();
     const alphabet = (q.alphabet || '').trim();
+    const group = (q.group || q.addressGroup || '').trim().toUpperCase();
+    const subscription = (q.subscription || '').trim();
     const sort = q.sort || 'name_asc';
 
     const { db } = await getDb();
@@ -90,8 +92,44 @@ export async function handler(event, context) {
         { city: sReg },
         { district: sReg },
         { pincode: sReg },
-        { phone: sReg }
+        { phone: sReg },
+        { addressGroup: sReg }
       ];
+    }
+
+    // Address Group Filter
+    if (group && group !== 'ALL') {
+      if (group === 'NORMAL') {
+        // Match NORMAL or missing/null/empty addressGroup for backwards compatibility
+        const normalCond = {
+          $or: [
+            { addressGroup: 'NORMAL' },
+            { addressGroup: { $exists: false } },
+            { addressGroup: null },
+            { addressGroup: '' }
+          ]
+        };
+        if (query.$and) {
+          query.$and.push(normalCond);
+        } else {
+          query.$and = [normalCond];
+        }
+      } else {
+        query.addressGroup = group;
+      }
+    }
+
+    // Subscription Filter if requested
+    if (subscription && subscription !== 'ALL') {
+      if (subscription === 'SUBSCRIBED' || subscription === 'true') {
+        query.subscription = true;
+      } else if (subscription === 'UNSUBSCRIBED' || subscription === 'false') {
+        query.$or = [
+          { subscription: false },
+          { subscription: { $exists: false } },
+          { subscription: null }
+        ];
+      }
     }
 
     if (district && district !== 'ALL') {
@@ -129,20 +167,53 @@ export async function handler(event, context) {
 
     let sortOption = { name: 1 };
     if (sort === 'name_desc') sortOption = { name: -1 };
+    else if (sort === 'district_asc') sortOption = { district: 1, name: 1 };
+    else if (sort === 'district_desc') sortOption = { district: -1, name: 1 };
+    else if (sort === 'group_asc') sortOption = { addressGroup: 1, name: 1 };
+    else if (sort === 'group_desc') sortOption = { addressGroup: -1, name: 1 };
     else if (sort === 'pincode_asc') sortOption = { pincode: 1, name: 1 };
     else if (sort === 'pincode_desc') sortOption = { pincode: -1, name: 1 };
     else if (sort === 'created_desc') sortOption = { created_at: -1 };
     else if (sort === 'updated_desc') sortOption = { updated_at: -1 };
 
-    const total = Object.keys(query).length === 0
-      ? await collection.estimatedDocumentCount()
-      : await collection.countDocuments(query);
+    const hasFilters = Object.keys(query).length > 0;
 
-    const items = await collection.find(query).sort(sortOption).skip(skip).limit(limit).toArray();
+    const [items, groupAgg, filteredCount] = await Promise.all([
+      collection.find(query).sort(sortOption).skip(skip).limit(limit).toArray(),
+      collection.aggregate([
+        {
+          $group: {
+            _id: { $ifNull: ['$addressGroup', 'NORMAL'] },
+            count: { $sum: 1 }
+          }
+        }
+      ]).toArray().catch(() => []),
+      hasFilters ? collection.countDocuments(query) : Promise.resolve(null)
+    ]);
+
+    // Parse group counts across entire MongoDB database
+    const groupCounts = {
+      VIP: 0,
+      ADVERTISEMENT: 0,
+      HELP: 0,
+      NORMAL: 0
+    };
+    for (const g of groupAgg) {
+      const key = (g._id || 'NORMAL').toString().trim().toUpperCase();
+      if (groupCounts[key] !== undefined) {
+        groupCounts[key] += g.count;
+      } else {
+        groupCounts.NORMAL += g.count;
+      }
+    }
+
+    const totalDatabaseCount = groupCounts.VIP + groupCounts.ADVERTISEMENT + groupCounts.HELP + groupCounts.NORMAL;
+    const total = hasFilters ? (filteredCount ?? 0) : totalDatabaseCount;
 
     const serializedItems = items.map(item => ({
       ...item,
-      _id: item._id.toString()
+      _id: item._id.toString(),
+      addressGroup: item.addressGroup || 'NORMAL'
     }));
 
     const totalPages = total > 0 ? Math.ceil(total / limit) : 1;
@@ -152,6 +223,8 @@ export async function handler(event, context) {
       data: serializedItems,
       addresses: serializedItems,
       total,
+      totalDatabaseCount: totalDatabaseCount || total,
+      groupCounts,
       page,
       limit,
       totalPages
@@ -161,3 +234,4 @@ export async function handler(event, context) {
     return jsonResponse(500, { error: err.message || 'Failed to query addresses' });
   }
 }
+

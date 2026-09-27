@@ -1,15 +1,17 @@
 import React from 'react';
-import { FilterX, ArrowUpDown, Building2, Hash, MapPin, X } from 'lucide-react';
+import { FilterX, ArrowUpDown, Building2, Hash, MapPin, Tag, X } from 'lucide-react';
 import { SORTED_TAMIL_DISTRICTS } from '../utils/tamilHelper';
 
 export function FilterBar({
   district,
   pincode,
   street,
+  group,
   sort,
   onDistrictChange,
   onPincodeChange,
   onStreetChange,
+  onGroupChange,
   onSortChange,
   onClearFilters,
   hasActiveFilters,
@@ -17,8 +19,25 @@ export function FilterBar({
 }) {
   return (
     <div className="address-filter-bar">
+      {/* Address Group / Category Dropdown */}
+      <div className="address-filter-item" style={{ minWidth: '160px' }}>
+        <Tag size={16} style={{ color: '#2563eb', flexShrink: 0 }} />
+        <select
+          value={group || 'ALL'}
+          onChange={(e) => onGroupChange && onGroupChange(e.target.value)}
+          className="form-select"
+          style={{ height: '38px', fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 700, width: '100%' }}
+        >
+          <option value="ALL">All Groups</option>
+          <option value="VIP">⭐ VIP</option>
+          <option value="ADVERTISEMENT">📢 ADVERTISEMENT</option>
+          <option value="HELP">🤝 HELP</option>
+          <option value="CONTRIBUTOR">📋 CONTRIBUTOR</option>
+        </select>
+      </div>
+
       {/* Tamil District Dropdown (Sorted in Tamil Alphabetical Order) */}
-      <div className="address-filter-item" style={{ minWidth: '200px' }}>
+      <div className="address-filter-item" style={{ minWidth: '190px' }}>
         <Building2 size={16} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
         <select
           value={district || 'ALL'}
@@ -84,7 +103,7 @@ export function FilterBar({
       </div>
 
       {/* Pincode Filter */}
-      <div className="address-filter-item" style={{ flex: '0 1 140px' }}>
+      <div className="address-filter-item" style={{ flex: '0 1 130px' }}>
         <Hash size={16} style={{ color: '#2563eb', flexShrink: 0 }} />
         <div style={{ position: 'relative', width: '100%' }}>
           <input
@@ -129,7 +148,7 @@ export function FilterBar({
         </div>
       </div>
 
-      {/* Sort Selector with Tamil Alphabetical Order */}
+      {/* Sort Selector with Group and Alphabetical options */}
       <div className="address-filter-item" style={{ minWidth: '190px' }}>
         <ArrowUpDown size={16} style={{ color: '#2563eb', flexShrink: 0 }} />
         <select
@@ -144,6 +163,9 @@ export function FilterBar({
           <option value="name_desc" style={{ color: 'var(--text-primary)', backgroundColor: 'var(--bg-card)' }}>
             {langMode === 'TA' ? 'பெயர்: தலைகீழ் (ன → அ)' : 'Name: Z → A / ன → அ'}
           </option>
+          <option value="district_asc" style={{ color: 'var(--text-primary)', backgroundColor: 'var(--bg-card)' }}>District: A → Z</option>
+          <option value="group_asc" style={{ color: 'var(--text-primary)', backgroundColor: 'var(--bg-card)' }}>Group: VIP → CONTRIBUTOR</option>
+          <option value="group_desc" style={{ color: 'var(--text-primary)', backgroundColor: 'var(--bg-card)' }}>Group: CONTRIBUTOR → VIP</option>
           <option value="pincode_asc" style={{ color: 'var(--text-primary)', backgroundColor: 'var(--bg-card)' }}>Pincode: Low → High</option>
           <option value="pincode_desc" style={{ color: 'var(--text-primary)', backgroundColor: 'var(--bg-card)' }}>Pincode: High → Low</option>
           <option value="created_desc" style={{ color: 'var(--text-primary)', backgroundColor: 'var(--bg-card)' }}>Recently Added</option>
@@ -165,4 +187,5 @@ export function FilterBar({
     </div>
   );
 }
+
 

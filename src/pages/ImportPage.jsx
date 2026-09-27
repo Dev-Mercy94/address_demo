@@ -6,6 +6,7 @@ import { Upload, FileSpreadsheet, FileText, CheckCircle2, AlertCircle, Eye, Tras
 import { Toast } from '../components/Toast';
 import { PageLoader } from '../components/PageLoader';
 import { DuplicateModal } from '../components/DuplicateModal';
+import { RAW_DISTRICTS_DATA } from '../utils/tamilHelper';
 
 // Helper to validate and format U.Id (e.g. T-0001, M-0001). Rejects digit prefixes like 5-0271, 9-8659
 function sanitizeUId(rawUid) {
@@ -16,6 +17,19 @@ function sanitizeUId(rawUid) {
     return `${parts[0].toUpperCase()}-${parts[1].padStart(4, '0')}`;
   }
   return '';
+}
+
+function getTamilDistrict(distStr) {
+  if (!distStr) return '';
+  const cleanStr = distStr.trim();
+  const distMatch = RAW_DISTRICTS_DATA.find(d => 
+    d.id.toLowerCase() === cleanStr.toLowerCase() || 
+    d.en.toLowerCase() === cleanStr.toLowerCase()
+  );
+  if (distMatch && distMatch.ta) {
+    return distMatch.ta;
+  }
+  return cleanStr;
 }
 
 // Helper to validate that Pincode is strictly 6 digits
@@ -73,6 +87,56 @@ function getDuplicateReason(pair) {
   return 'Matching address record details';
 }
 
+const GroupDropdown = ({ value, onChange, onClose }) => {
+  const options = ['VIP', 'ADVERTISEMENT', 'HELP', 'CONTRIBUTOR'];
+
+  return (
+    <div 
+      style={{
+        position: 'absolute',
+        top: 'calc(100% + 4px)',
+        right: 0,
+        backgroundColor: 'var(--bg-card)',
+        padding: '0.75rem',
+        borderRadius: '12px',
+        width: '200px',
+        boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
+        border: '1px solid var(--border-color)',
+        zIndex: 9999,
+        display: 'flex',
+        flexDirection: 'column'
+      }}
+      onClick={e => e.stopPropagation()}
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', maxHeight: '180px', overflowY: 'auto' }}>
+        {options.map(opt => (
+          <button
+            key={opt}
+            onClick={(e) => { e.stopPropagation(); onChange(opt); onClose(); }}
+            style={{
+              width: '100%', 
+              textAlign: 'left', 
+              padding: '0.5rem 0.75rem', 
+              borderRadius: '6px',
+              border: '1px solid transparent',
+              backgroundColor: value === opt ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
+              color: value === opt ? 'var(--accent-primary)' : 'var(--text-primary)',
+              fontWeight: value === opt ? 700 : 500,
+              fontSize: '0.8rem',
+              cursor: 'pointer',
+              transition: 'all 0.15s'
+            }}
+            onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-secondary)'}
+            onMouseLeave={e => e.currentTarget.style.backgroundColor = value === opt ? 'rgba(99, 102, 241, 0.1)' : 'transparent'}
+          >
+            {opt}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 // Memoized preview table row to eliminate re-renders on keystroke (100% instant typing)
 const PreviewTableRow = React.memo(function PreviewTableRow({
   item,
@@ -81,6 +145,7 @@ const PreviewTableRow = React.memo(function PreviewTableRow({
   onRemove
 }) {
   const [localItem, setLocalItem] = useState(item);
+  const [showGroupModal, setShowGroupModal] = useState(false);
 
   useEffect(() => {
     setLocalItem(item);
@@ -154,6 +219,42 @@ const PreviewTableRow = React.memo(function PreviewTableRow({
           style={{ width: '100%', padding: '4px 4px', borderRadius: '4px', border: '1px solid var(--border-color)', fontSize: '0.825rem' }}
         />
       </td>
+      <td style={{ padding: '6px 4px', position: 'relative' }}>
+        {showGroupModal && (
+          <div 
+            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9998 }}
+            onClick={(e) => { e.stopPropagation(); setShowGroupModal(false); }}
+          />
+        )}
+        <button
+          onClick={() => setShowGroupModal(!showGroupModal)}
+          style={{ 
+            width: '100%', 
+            padding: '4px 6px', 
+            borderRadius: '4px', 
+            border: '1px solid var(--border-color)', 
+            fontSize: '0.78rem', 
+            fontWeight: 700, 
+            backgroundColor: 'var(--bg-secondary)', 
+            color: 'var(--text-primary)',
+            cursor: 'pointer',
+            textAlign: 'left',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}
+        >
+          {localItem.addressGroup || 'CONTRIBUTOR'}
+          <span style={{ fontSize: '0.6rem', opacity: 0.6 }}>▼</span>
+        </button>
+        {showGroupModal && (
+          <GroupDropdown 
+            value={localItem.addressGroup || 'CONTRIBUTOR'} 
+            onChange={(val) => handleChange('addressGroup', val)}
+            onClose={() => setShowGroupModal(false)}
+          />
+        )}
+      </td>
       <td style={{ padding: '6px 4px', textAlign: 'center' }}>
         <button
           onClick={() => onRemove(globalIdx)}
@@ -167,6 +268,7 @@ const PreviewTableRow = React.memo(function PreviewTableRow({
     </tr>
   );
 });
+
 
 export function ImportPage({ onNavigate, onStatsChange }) {
   const [file, setFile] = useState(null);
@@ -269,6 +371,7 @@ export function ImportPage({ onNavigate, onStatsChange }) {
           const sanitized = extracted.map(item => ({
             ...item,
             u_id: sanitizeUId(item.u_id),
+            district: getTamilDistrict(item.district),
             pincode: sanitizePincode(item.pincode, item.district)
           }));
           setPreviewItems(sanitized);
@@ -299,14 +402,19 @@ export function ImportPage({ onNavigate, onStatsChange }) {
               address_line_2: convertBaminiToUnicode((r['Address Line 2'] || r.address_line_2 || '').trim()),
               area: convertBaminiToUnicode((r.Area || r.City || r.area || 'Coimbatore').trim()),
               city: convertBaminiToUnicode((r.City || r.city || 'Coimbatore').trim()),
-              district: convertBaminiToUnicode((r.District || r.district || 'Coimbatore').trim()),
+              district: getTamilDistrict(convertBaminiToUnicode((r.District || r.district || 'Coimbatore').trim())),
               state: convertBaminiToUnicode((r.State || r.state || 'Tamil Nadu').trim()),
               country: (r.Country || r.country || 'India').trim(),
               pincode: sanitizePincode(r.Pincode || r.pincode, r.District || r.district),
               phone: (r.Phone || r.phone || '').trim(),
+              addressGroup: (() => {
+                const raw = (r.addressGroup || r.address_group || r['Address Group'] || r.group || r['Group'] || 'CONTRIBUTOR').toString().trim().toUpperCase();
+                return ['VIP', 'ADVERTISEMENT', 'HELP', 'CONTRIBUTOR'].includes(raw) ? raw : 'CONTRIBUTOR';
+              })(),
               landmark: convertBaminiToUnicode((r.Landmark || r.landmark || '').trim()),
               notes: `Imported from ${selectedFile.name}`
             })).filter(item => item.name && item.address_line_1);
+
 
             setPreviewItems(parsed);
             setToast({ message: `Loaded ${parsed.length} records from CSV for preview!`, type: 'info' });
@@ -347,6 +455,7 @@ export function ImportPage({ onNavigate, onStatsChange }) {
         const sanitized = extracted.map(item => ({
           ...item,
           u_id: sanitizeUId(item.u_id),
+          district: getTamilDistrict(item.district),
           pincode: sanitizePincode(item.pincode, item.district)
         }));
         setPreviewItems(sanitized);
@@ -1037,8 +1146,10 @@ export function ImportPage({ onNavigate, onStatsChange }) {
                       <th style={{ padding: '8px 6px', width: '100px' }}>District</th>
                       <th style={{ padding: '8px 6px', width: '75px' }}>Pincode</th>
                       <th style={{ padding: '8px 6px', width: '105px' }}>Phone</th>
+                      <th style={{ padding: '8px 6px', width: '115px' }}>Group</th>
                       <th style={{ padding: '8px 6px', width: '50px', textAlign: 'center' }}>Action</th>
                     </tr>
+
                   </thead>
                   <tbody>
                     {currentPreviewChunk.map((item, localIdx) => {

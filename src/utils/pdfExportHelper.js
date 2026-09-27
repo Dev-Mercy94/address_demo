@@ -1,8 +1,9 @@
 /**
  * Utility functions for exporting address records directly to PDF format
  * with exact filename formatting: {DistrictName}_{DD-MM-YYYY}.pdf
- * Features a 2-addresses-per-row table grid and high-visibility Skyblue theme.
+ * Features a pixel-perfect 9 rows x 4 columns (36 boxes per A4 sheet) grid layout.
  */
+import { RAW_DISTRICTS_DATA } from './tamilHelper';
 
 export function formatDateDDMMYYYY(dateInput) {
   const d = dateInput ? new Date(dateInput) : new Date();
@@ -21,6 +22,7 @@ export function getExportFilename(filterInfo, extension = 'pdf') {
     if (filterInfo.district && filterInfo.district !== 'ALL') parts.push(filterInfo.district);
     if (filterInfo.city) parts.push(filterInfo.city.trim());
     if (filterInfo.area) parts.push(filterInfo.area.trim());
+    if (filterInfo.group && filterInfo.group !== 'ALL') parts.push(filterInfo.group);
     if (filterInfo.pincode) parts.push(`PIN_${filterInfo.pincode.trim()}`);
     if (parts.length === 0) parts.push('All_Districts');
   } else {
@@ -61,9 +63,36 @@ function loadHtml2PdfLibrary() {
 }
 
 /**
- * Directly downloads the 4-column directory book styled PDF file with clean borders
- * rendered page-by-page as isolated, discrete A4 portrait pages (36 boxes per page: 4 cols x 9 rows)
- * with header pagination ({District} - Po & Tk and page numbers) and zero slicing across pages.
+ * Sanitizes address field text to remove metadata/import noise words like:
+ * - "Imported from Kadayanallur Tk.pdf"
+ * - "Relation: "
+ * - "Mention: "
+ * - "Import: "
+ */
+function cleanFieldText(val) {
+  if (!val) return '';
+  let text = String(val);
+  // Remove full import sentences / references e.g. "Imported from Kadayanallur Tk.pdf"
+  text = text.replace(/imported\s+from\s+[^\n\r,\.;]+/gi, '');
+  text = text.replace(/imported\s+from/gi, '');
+  text = text.replace(/\.pdf\b/gi, '');
+  // Clean prefixes while keeping actual relationship / info text
+  text = text.replace(/relation\s*:\s*/gi, '');
+  text = text.replace(/mention\s*:\s*/gi, '');
+  text = text.replace(/import\s*:\s*/gi, '');
+  // Clean dangling commas, dashes, colons and excess spaces
+  text = text
+    .replace(/,\s*,+/g, ',')
+    .replace(/^\s*[,.\-:]\s*/, '')
+    .replace(/\s*[,.\-:]\s*$/, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+  return text;
+}
+
+/**
+ * Directly downloads the 4-column x 9-row directory grid PDF file (36 address cards per A4 page)
+ * with neat borders, high readability, and clean typography.
  */
 export async function exportAddressesToPdf(addresses = [], filterInfo = 'All Districts') {
   if (!addresses || addresses.length === 0) {
@@ -125,7 +154,7 @@ export async function exportAddressesToPdf(addresses = [], filterInfo = 'All Dis
       width: 794px;
       height: 1122px;
       max-height: 1122px;
-      padding: 16px 14px 12px 14px;
+      padding: 10px 12px 10px 12px;
       box-sizing: border-box;
       background: #ffffff;
       display: flex;
@@ -136,36 +165,58 @@ export async function exportAddressesToPdf(addresses = [], filterInfo = 'All Dis
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-bottom: 1.2px solid #000000;
-      padding-bottom: 4px;
-      margin-bottom: 6px;
+      border-bottom: 1.5px solid #000000;
+      padding-bottom: 2px;
+      margin-bottom: 4px;
+      height: 22px;
       width: 100%;
+      flex-shrink: 0;
     }
     .header-title {
-      font-size: 13.5px;
+      font-size: 13px;
       font-weight: 800;
       color: #000000;
-      letter-spacing: 0.02em;
+      letter-spacing: 0.01em;
     }
     .header-page-num {
-      font-size: 13.5px;
+      font-size: 13px;
       font-weight: 800;
       color: #000000;
     }
     .grid-table {
       width: 100%;
+      height: 1074px;
       table-layout: fixed;
-      border-collapse: separate;
-      border-spacing: 3px;
+      border-collapse: collapse;
       margin: 0;
       padding: 0;
       flex: 1;
     }
+    .grid-table tr {
+      height: 119.3px;
+      max-height: 119.3px;
+    }
     .grid-table td {
       width: 25%;
+      height: 119.3px;
+      max-height: 119.3px;
       vertical-align: top;
-      padding: 0;
-      height: 112px;
+      padding: 3px 4.5px;
+      box-sizing: border-box;
+      border: 1px solid #000000;
+      overflow: hidden;
+    }
+    .address-cell-content {
+      height: 100%;
+      max-height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      font-size: 8.5px;
+      line-height: 1.22;
+      color: #000000;
+      overflow: hidden;
+      word-break: break-word;
       box-sizing: border-box;
     }
   `;
@@ -213,7 +264,7 @@ export async function exportAddressesToPdf(addresses = [], filterInfo = 'All Dis
             if (item) {
               return `<td>${renderDirectoryAddressBox(item)}</td>`;
             } else {
-              return `<td><div style="height: 112px; visibility: hidden;"></div></td>`;
+              return `<td><div class="address-cell-content" style="visibility: hidden;"></div></td>`;
             }
           }).join('');
           return `<tr>${cellsHtml}</tr>`;
@@ -287,7 +338,7 @@ export async function exportAddressesToPdf(addresses = [], filterInfo = 'All Dis
           const cellsHtml = [0, 1, 2, 3].map(c => {
             const item = row[c];
             if (item) return `<td>${renderDirectoryAddressBox(item)}</td>`;
-            else return `<td><div style="height: 112px; visibility: hidden;"></div></td>`;
+            else return `<td><div class="address-cell-content" style="visibility: hidden;"></div></td>`;
           }).join('');
           return `<tr>${cellsHtml}</tr>`;
         }).join('');
@@ -313,7 +364,7 @@ export async function exportAddressesToPdf(addresses = [], filterInfo = 'All Dis
         margin: 0,
         filename: fileName,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
+        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
       await html2pdf().set(opt).from(iframe.contentDocument.body).save();
@@ -332,13 +383,13 @@ export async function exportAddressesToPdf(addresses = [], filterInfo = 'All Dis
 function renderDirectoryAddressBox(addr) {
   if (!addr) return '';
 
-  const uId = (addr.u_id || '').trim();
-  const name = (addr.name || '').trim();
-  const notes = (addr.notes || '').trim();
+  const uId = cleanFieldText(addr.u_id);
+  const name = cleanFieldText(addr.name);
+  const notes = cleanFieldText(addr.notes);
 
   // Line 1: Door No + Address Line 1 / Street
-  const door = (addr.door_no || '').trim();
-  const line1Raw = (addr.address_line_1 || addr.street || '').trim();
+  const door = cleanFieldText(addr.door_no);
+  const line1Raw = cleanFieldText(addr.address_line_1 || addr.street);
   let streetLine = '';
   if (door && line1Raw) {
     streetLine = `${door}, ${line1Raw}`;
@@ -349,24 +400,33 @@ function renderDirectoryAddressBox(addr) {
   }
 
   // Line 2: Area / Address Line 2 / Landmark
-  const line2Raw = (addr.address_line_2 || '').trim();
-  const areaRaw = (addr.area || '').trim();
-  const landmarkRaw = (addr.landmark || '').trim();
+  const line2Raw = cleanFieldText(addr.address_line_2);
+  const areaRaw = cleanFieldText(addr.area);
+  const landmarkRaw = cleanFieldText(addr.landmark);
   const areaParts = [line2Raw, areaRaw, landmarkRaw].filter(Boolean);
   let areaLine = areaParts.join(', ');
 
   // Line 3: City / Post Office
-  let cityLine = (addr.city || '').trim();
+  let cityLine = cleanFieldText(addr.city);
   if (cityLine && !cityLine.toLowerCase().includes('po')) {
     cityLine = `${cityLine} Po`;
   }
 
   // Line 4: District & Pincode Line
-  let distStr = (addr.district || '').trim();
-  if (distStr && !distStr.toLowerCase().includes('tk') && !distStr.toLowerCase().includes('dt')) {
-    distStr = `${distStr} Tk & Dt`;
+  let distStr = cleanFieldText(addr.district);
+  if (distStr) {
+    const distMatch = RAW_DISTRICTS_DATA.find(d => 
+      d.id.toLowerCase() === distStr.toLowerCase() || 
+      d.en.toLowerCase() === distStr.toLowerCase()
+    );
+    if (distMatch && distMatch.ta) {
+      distStr = distMatch.ta;
+    }
   }
-  const pinStr = (addr.pincode || '').trim();
+  if (distStr && !distStr.toLowerCase().includes('tk') && !distStr.toLowerCase().includes('dt') && !distStr.includes('மாவட்டம்')) {
+    distStr = `${distStr} மாவட்டம்`;
+  }
+  const pinStr = cleanFieldText(addr.pincode);
   let districtLine = distStr;
   if (districtLine && pinStr) {
     districtLine = `${districtLine} ${pinStr}`;
@@ -375,38 +435,21 @@ function renderDirectoryAddressBox(addr) {
   }
 
   // Phone number (Cell : ...)
-  let phoneStr = (addr.phone || '').trim();
+  let phoneStr = cleanFieldText(addr.phone);
   if (phoneStr) {
     phoneStr = `Cell : ${phoneStr}`;
   }
 
   return `
-    <div style="
-      border: 1px solid #000000;
-      background-color: #ffffff;
-      padding: 3px 4.5px;
-      height: 112px;
-      max-height: 112px;
-      min-height: 112px;
-      font-size: 8.8px;
-      line-height: 1.22;
-      color: #000000;
-      display: flex;
-      flex-direction: column;
-      justify-content: flex-start;
-      overflow: hidden;
-      word-break: break-word;
-      box-sizing: border-box;
-      border-radius: 1px;
-    ">
-      ${uId ? `<div style="font-weight: 800; font-size: 9.3px; color: #000000; margin-bottom: 1px; font-family: 'JetBrains Mono', monospace, Arial, sans-serif;">${escapeHtml(uId)}</div>` : ''}
-      ${name ? `<div style="font-weight: 700; font-size: 9.3px; color: #000000; margin-bottom: 1px;">${escapeHtml(name)}</div>` : ''}
-      ${notes ? `<div style="font-size: 8.4px; color: #000000; font-weight: 500;">${escapeHtml(notes)}</div>` : ''}
-      ${streetLine ? `<div style="font-size: 8.4px; color: #000000;">${escapeHtml(streetLine)}</div>` : ''}
-      ${areaLine ? `<div style="font-size: 8.4px; color: #000000;">${escapeHtml(areaLine)}</div>` : ''}
-      ${cityLine ? `<div style="font-size: 8.4px; color: #000000;">${escapeHtml(cityLine)}</div>` : ''}
-      ${districtLine ? `<div style="font-size: 8.4px; color: #000000;">${escapeHtml(districtLine)}</div>` : ''}
-      ${phoneStr ? `<div style="font-weight: 700; font-size: 8.8px; color: #000000; margin-top: auto; padding-top: 1px;">${escapeHtml(phoneStr)}</div>` : ''}
+    <div class="address-cell-content">
+      ${uId ? `<div style="font-weight: 800; font-size: 9.2px; color: #000000; margin-bottom: 0.5px; font-family: 'JetBrains Mono', monospace, Arial, sans-serif;">${escapeHtml(uId)}</div>` : ''}
+      ${name ? `<div style="font-weight: 700; font-size: 9.2px; color: #000000; margin-bottom: 0.5px;">${escapeHtml(name)}</div>` : ''}
+      ${notes ? `<div style="font-size: 8.2px; color: #000000; font-weight: 500;">${escapeHtml(notes)}</div>` : ''}
+      ${streetLine ? `<div style="font-size: 8.2px; color: #000000;">${escapeHtml(streetLine)}</div>` : ''}
+      ${areaLine ? `<div style="font-size: 8.2px; color: #000000;">${escapeHtml(areaLine)}</div>` : ''}
+      ${cityLine ? `<div style="font-size: 8.2px; color: #000000;">${escapeHtml(cityLine)}</div>` : ''}
+      ${districtLine ? `<div style="font-size: 8.2px; color: #000000;">${escapeHtml(districtLine)}</div>` : ''}
+      ${phoneStr ? `<div style="font-weight: 700; font-size: 8.6px; color: #000000; margin-top: auto; padding-top: 1px;">${escapeHtml(phoneStr)}</div>` : ''}
     </div>
   `;
 }
@@ -432,7 +475,7 @@ export function exportAddressesToCsv(addresses = [], filterInfo = 'All Districts
 
   const fileName = getExportFilename(filterInfo, 'csv');
 
-  const headers = ['U.Id', 'Name', 'Door No', 'Address Line 1', 'Address Line 2', 'Area', 'City', 'District', 'State', 'Country', 'Pincode', 'Phone', 'Landmark', 'Notes'];
+  const headers = ['U.Id', 'Name', 'Door No', 'Address Line 1', 'Address Line 2', 'Area', 'City', 'District', 'State', 'Pincode', 'Phone', 'addressGroup', 'Landmark', 'Notes'];
 
   const escapeCsv = (val) => {
     if (val === null || val === undefined) return '""';
@@ -444,21 +487,22 @@ export function exportAddressesToCsv(addresses = [], filterInfo = 'All Districts
     escapeCsv(a.u_id || ''),
     escapeCsv(a.name || ''),
     escapeCsv(a.door_no || ''),
-    escapeCsv(a.address_line_1 || ''),
+    escapeCsv(a.address_line_1 || a.street || ''),
     escapeCsv(a.address_line_2 || ''),
     escapeCsv(a.area || ''),
     escapeCsv(a.city || ''),
     escapeCsv(a.district || ''),
-    escapeCsv(a.state || 'Tamil Nadu'),
-    escapeCsv(a.country || 'India'),
+    escapeCsv('தமிழ்நாடு'),
     escapeCsv(a.pincode || ''),
     escapeCsv(a.phone || ''),
+    escapeCsv(a.addressGroup || 'CONTRIBUTOR'),
     escapeCsv(a.landmark || ''),
     escapeCsv(a.notes || '')
   ].join(','));
 
-  const csvContent = '\uFEFF' + [headers.map(h => `"${h}"`).join(','), ...rows].join('\r\n');
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const csvContentStr = [headers.map(h => `"${h}"`).join(','), ...rows].join('\r\n');
+  const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+  const blob = new Blob([bom, csvContentStr], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.setAttribute('href', url);
@@ -471,3 +515,62 @@ export function exportAddressesToCsv(addresses = [], filterInfo = 'All Districts
   return { success: true, fileName, count: addresses.length };
 }
 
+/**
+ * Exports address records to a Microsoft Word (.doc) file containing an HTML table,
+ * which natively supports UTF-8 Tamil rendering and includes basic table borders.
+ */
+export function exportAddressesToWord(addresses = [], filterInfo = 'All Districts') {
+  if (!addresses || addresses.length === 0) {
+    return { success: false, message: 'No records available to export', count: 0 };
+  }
+
+  const fileName = getExportFilename(filterInfo, 'doc');
+  const headers = ['U.Id', 'Name', 'Door No', 'Address Line 1', 'Address Line 2', 'Area', 'City', 'District', 'State', 'Pincode', 'Phone', 'Group', 'Landmark', 'Notes'];
+
+  let tableHtml = '<table border="1" style="border-collapse: collapse; width: 100%; font-family: sans-serif; font-size: 11px;">';
+  tableHtml += '<tr>' + headers.map(h => `<th style="background-color: #f3f4f6; padding: 6px; text-align: left;">${escapeHtml(h)}</th>`).join('') + '</tr>';
+  
+  addresses.forEach(a => {
+    tableHtml += '<tr>';
+    tableHtml += `<td style="padding: 4px;">${escapeHtml(a.u_id)}</td>`;
+    tableHtml += `<td style="padding: 4px; font-weight: bold;">${escapeHtml(a.name)}</td>`;
+    tableHtml += `<td style="padding: 4px;">${escapeHtml(a.door_no)}</td>`;
+    tableHtml += `<td style="padding: 4px;">${escapeHtml(a.address_line_1 || a.street)}</td>`;
+    tableHtml += `<td style="padding: 4px;">${escapeHtml(a.address_line_2)}</td>`;
+    tableHtml += `<td style="padding: 4px;">${escapeHtml(a.area)}</td>`;
+    tableHtml += `<td style="padding: 4px;">${escapeHtml(a.city)}</td>`;
+    tableHtml += `<td style="padding: 4px;">${escapeHtml(a.district)}</td>`;
+    tableHtml += `<td style="padding: 4px;">தமிழ்நாடு</td>`;
+    tableHtml += `<td style="padding: 4px;">${escapeHtml(a.pincode)}</td>`;
+    tableHtml += `<td style="padding: 4px;">${escapeHtml(a.phone)}</td>`;
+    tableHtml += `<td style="padding: 4px;">${escapeHtml(a.addressGroup || 'CONTRIBUTOR')}</td>`;
+    tableHtml += `<td style="padding: 4px;">${escapeHtml(a.landmark)}</td>`;
+    tableHtml += `<td style="padding: 4px;">${escapeHtml(a.notes)}</td>`;
+    tableHtml += '</tr>';
+  });
+  tableHtml += '</table>';
+
+  const htmlContent = `
+    <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+    <head>
+      <meta charset='utf-8'>
+      <title>Export</title>
+    </head>
+    <body>
+      ${tableHtml}
+    </body>
+    </html>
+  `;
+
+  const blob = new Blob([htmlContent], { type: 'application/msword;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', fileName);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+
+  return { success: true, fileName, count: addresses.length };
+}

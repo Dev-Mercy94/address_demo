@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { fetchAddresses } from '../services/apiService';
-import { Download, FileText, FileSpreadsheet, Building2, MapPin, Hash, Map, FilterX, CheckCircle2, AlertCircle, Sparkles } from 'lucide-react';
+import { Download, FileText, FileSpreadsheet, Building2, MapPin, Hash, Map, FilterX, CheckCircle2, AlertCircle, Sparkles, Tag } from 'lucide-react';
 import { Toast } from '../components/Toast';
-import { exportAddressesToPdf, exportAddressesToCsv, getExportFilename } from '../utils/pdfExportHelper';
+import { exportAddressesToPdf, exportAddressesToCsv, exportAddressesToWord, getExportFilename } from '../utils/pdfExportHelper';
 import { SORTED_TAMIL_DISTRICTS } from '../utils/tamilHelper';
 
 export function ExportPage() {
@@ -14,7 +14,8 @@ export function ExportPage() {
     district: 'ALL',
     city: 'ALL',
     area: 'ALL',
-    pincode: 'ALL'
+    pincode: 'ALL',
+    group: 'ALL'
   });
   const [toast, setToast] = useState({ message: '', type: 'success' });
 
@@ -83,13 +84,22 @@ export function ExportPage() {
     });
   }, [cityMatchedRecords, filters.area]);
 
-  // 4. Final matching records: District + City + Area + Pincode
+  // 4. Group matching records
+  const groupMatchedRecords = useMemo(() => {
+    if (filters.group === 'ALL') return areaMatchedRecords;
+    return areaMatchedRecords.filter(r => {
+      const g = (r.addressGroup || 'CONTRIBUTOR').toUpperCase();
+      return g === filters.group.toUpperCase();
+    });
+  }, [areaMatchedRecords, filters.group]);
+
+  // 5. Final matching records: District + City + Area + Group + Pincode
   const matchingRecords = useMemo(() => {
     if (exportType === 'all') return allRecords;
-    if (filters.pincode === 'ALL' || !filters.pincode.trim()) return areaMatchedRecords;
+    if (filters.pincode === 'ALL' || !filters.pincode.trim()) return groupMatchedRecords;
     const p = filters.pincode.trim();
-    return areaMatchedRecords.filter(r => String(r.pincode || '').trim().startsWith(p));
-  }, [exportType, allRecords, areaMatchedRecords, filters.pincode]);
+    return groupMatchedRecords.filter(r => String(r.pincode || '').trim().startsWith(p));
+  }, [exportType, allRecords, groupMatchedRecords, filters.pincode]);
 
   // Dynamic cascading option lists with record counts
   const availableDistricts = useMemo(() => {
@@ -190,12 +200,20 @@ export function ExportPage() {
     }));
   };
 
+  const handleGroupChange = (newGroup) => {
+    setFilters(prev => ({
+      ...prev,
+      group: newGroup
+    }));
+  };
+
   const handleClearFilters = () => {
     setFilters({
       district: 'ALL',
       city: 'ALL',
       area: 'ALL',
-      pincode: 'ALL'
+      pincode: 'ALL',
+      group: 'ALL'
     });
   };
 
@@ -203,7 +221,8 @@ export function ExportPage() {
     (filters.district && filters.district !== 'ALL') ||
     (filters.city && filters.city !== 'ALL') ||
     (filters.area && filters.area !== 'ALL') ||
-    (filters.pincode && filters.pincode !== 'ALL')
+    (filters.pincode && filters.pincode !== 'ALL') ||
+    (filters.group && filters.group !== 'ALL')
   );
 
   const handleExportPdf = async () => {
@@ -219,7 +238,8 @@ export function ExportPage() {
         district: filters.district !== 'ALL' ? filters.district : 'All Districts',
         city: filters.city !== 'ALL' ? filters.city : '',
         area: filters.area !== 'ALL' ? filters.area : '',
-        pincode: filters.pincode !== 'ALL' ? filters.pincode : ''
+        pincode: filters.pincode !== 'ALL' ? filters.pincode : '',
+        group: filters.group !== 'ALL' ? filters.group : ''
       } : 'All Districts';
 
       const res = await exportAddressesToPdf(matchingRecords, filterInfo);
@@ -247,7 +267,8 @@ export function ExportPage() {
         district: filters.district !== 'ALL' ? filters.district : 'All Districts',
         city: filters.city !== 'ALL' ? filters.city : '',
         area: filters.area !== 'ALL' ? filters.area : '',
-        pincode: filters.pincode !== 'ALL' ? filters.pincode : ''
+        pincode: filters.pincode !== 'ALL' ? filters.pincode : '',
+        group: filters.group !== 'ALL' ? filters.group : ''
       } : 'All Districts';
 
       const res = exportAddressesToCsv(matchingRecords, filterInfo);
@@ -259,6 +280,33 @@ export function ExportPage() {
     } catch (err) {
       console.error('CSV Export error:', err);
       setToast({ message: err.message || 'Validation Error: Failed to export CSV file.', type: 'error' });
+    }
+  };
+
+  const handleExportWord = () => {
+    try {
+      if (!matchingRecords || matchingRecords.length === 0) {
+        setToast({ message: 'Validation Warning: No records found matching the selected export filters.', type: 'warning' });
+        return;
+      }
+
+      const filterInfo = exportType === 'filtered' ? {
+        district: filters.district !== 'ALL' ? filters.district : 'All Districts',
+        city: filters.city !== 'ALL' ? filters.city : '',
+        area: filters.area !== 'ALL' ? filters.area : '',
+        pincode: filters.pincode !== 'ALL' ? filters.pincode : '',
+        group: filters.group !== 'ALL' ? filters.group : ''
+      } : 'All Districts';
+
+      const res = exportAddressesToWord(matchingRecords, filterInfo);
+      if (res?.success) {
+        setToast({ message: `Download Validated: Successfully generated and downloaded Word document with ${res.count} records (${res.fileName}).`, type: 'success' });
+      } else {
+        setToast({ message: res?.message || 'Validation Notice: Export completed.', type: 'info' });
+      }
+    } catch (err) {
+      console.error('Word Export error:', err);
+      setToast({ message: err.message || 'Validation Error: Failed to export Word file.', type: 'error' });
     }
   };
 
@@ -339,7 +387,7 @@ export function ExportPage() {
             <div>
               <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Export Filtered Records</div>
               <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                Filter by District, City, Area, or Pincode to download targeted subsets
+                Filter by District, City, Area, Group, or Pincode to download targeted subsets
               </div>
             </div>
           </label>
@@ -375,7 +423,7 @@ export function ExportPage() {
 
             <div style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
               gap: '1rem'
             }}>
               {/* 1. District Filter */}
@@ -444,7 +492,29 @@ export function ExportPage() {
                 </select>
               </div>
 
-              {/* 4. Pincode Filter (Cascading) */}
+              {/* 4. Group Filter */}
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <Tag size={14} style={{ color: '#2563eb' }} /> Address Group
+                </label>
+                <select
+                  value={filters.group}
+                  onChange={(e) => handleGroupChange(e.target.value)}
+                  className="form-select"
+                  style={{ height: '40px', fontSize: '0.85rem', fontWeight: 600 }}
+                >
+                  <option value="ALL">All Groups</option>
+                  <option value="VIP">VIP</option>
+                  <option value="ADVERTISEMENT">ADVERTISEMENT</option>
+                  <option value="HELP">HELP</option>
+                  <option value="CONTRIBUTOR">CONTRIBUTOR</option>
+                  <option value="CANCEL">CANCEL</option>
+                  <option value="CALLBACK">CALLBACK</option>
+                  <option value="MATRIMONY">MATRIMONY</option>
+                </select>
+              </div>
+
+              {/* 5. Pincode Filter (Cascading) */}
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                   <Hash size={14} style={{ color: '#2563eb' }} /> Pincode
@@ -509,6 +579,9 @@ export function ExportPage() {
               {filters.area !== 'ALL' && (
                 <span className="badge badge-warning" style={{ fontSize: '0.75rem' }}>{filters.area}</span>
               )}
+              {filters.group !== 'ALL' && (
+                <span className={`badge badge-group-${filters.group.toLowerCase()}`} style={{ fontSize: '0.75rem' }}>{filters.group}</span>
+              )}
               {filters.pincode !== 'ALL' && (
                 <span className="badge badge-success" style={{ fontSize: '0.75rem' }}>{filters.pincode}</span>
               )}
@@ -531,6 +604,21 @@ export function ExportPage() {
             }}
           >
             <FileSpreadsheet size={18} /> Export CSV
+          </button>
+
+          <button
+            onClick={handleExportWord}
+            disabled={matchingRecords.length === 0 || loadingData}
+            className="btn btn-secondary"
+            style={{
+              padding: '0.65rem 1.35rem',
+              fontSize: '0.95rem',
+              borderColor: '#2563eb',
+              color: '#2563eb',
+              fontWeight: 700
+            }}
+          >
+            <FileText size={18} /> Export Word
           </button>
 
           <button

@@ -32,6 +32,16 @@ export async function handler(event, context) {
       return jsonResponse(400, { error: 'Name, Address Line 1, District, and Pincode are required fields.' });
     }
 
+    // Validate addressGroup: allowed VIP, ADVERTISEMENT, HELP, CONTRIBUTOR, CANCEL, CALLBACK, MATRIMONY
+    const rawGroup = (data.addressGroup || data.group || 'CONTRIBUTOR').toString().trim().toUpperCase();
+    const validGroups = ['VIP', 'ADVERTISEMENT', 'HELP', 'CONTRIBUTOR', 'CANCEL', 'CALLBACK', 'MATRIMONY'];
+    if (!validGroups.includes(rawGroup) && rawGroup !== 'NORMAL') { // keeping NORMAL check to gracefully upgrade it if passed
+      return jsonResponse(400, {
+        error: `Invalid addressGroup '${rawGroup}'. Allowed values are: VIP, ADVERTISEMENT, HELP, CONTRIBUTOR, CANCEL, CALLBACK, MATRIMONY.`
+      });
+    }
+    const finalGroup = rawGroup === 'NORMAL' ? 'CONTRIBUTOR' : rawGroup;
+
     const now = new Date().toISOString();
     const newDoc = {
       u_id: (data.u_id || data.code || '').trim(),
@@ -47,6 +57,7 @@ export async function handler(event, context) {
       pincode,
       phone: (data.phone || '').trim(),
       alt_phone: (data.alt_phone || '').trim(),
+      addressGroup: finalGroup,
       landmark: (data.landmark || '').trim(),
       notes: (data.notes || '').trim(),
       subscription: Boolean(data.subscription),
@@ -79,3 +90,4 @@ export async function handler(event, context) {
     return jsonResponse(500, { error: err.message || 'Internal Server Error' });
   }
 }
+

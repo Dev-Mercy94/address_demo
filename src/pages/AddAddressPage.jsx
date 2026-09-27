@@ -9,6 +9,7 @@ import {
   User,
   MapPin,
   Phone,
+  Tag,
   FileText,
   Compass,
   CheckSquare,
@@ -48,6 +49,7 @@ export function AddAddressPage({ initialData = null, onNavigate, onComplete, onS
     pincode: '',
     phone: '',
     alt_phone: '',
+    addressGroup: 'CONTRIBUTOR',
     landmark: '',
     notes: '',
     subscription: false,
@@ -78,6 +80,7 @@ export function AddAddressPage({ initialData = null, onNavigate, onComplete, onS
         pincode: initialData.pincode || '',
         phone: initialData.phone || '',
         alt_phone: initialData.alt_phone || '',
+        addressGroup: (initialData.addressGroup || 'CONTRIBUTOR').toUpperCase(),
         landmark: initialData.landmark || '',
         notes: initialData.notes || '',
         subscription: Boolean(initialData.subscription),
@@ -164,6 +167,7 @@ export function AddAddressPage({ initialData = null, onNavigate, onComplete, onS
           pincode: '',
           phone: '',
           alt_phone: '',
+          addressGroup: 'CONTRIBUTOR',
           landmark: '',
           notes: '',
           subscription: false,
@@ -183,6 +187,7 @@ export function AddAddressPage({ initialData = null, onNavigate, onComplete, onS
       setSaving(false);
     }
   };
+
 
   return (
     <div style={{ maxWidth: '880px', margin: '0 auto', paddingBottom: '2.5rem' }}>
@@ -320,11 +325,41 @@ export function AddAddressPage({ initialData = null, onNavigate, onComplete, onS
                 onChange={handleChange}
                 placeholder="e.g. 9876543211"
                 className="form-input"
-                style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}
+                style={{ fontFamily: 'var(--font-mono)' }}
               />
+            </div>
+
+            {/* Address Group / Category * */}
+            <div className="form-group" style={{ margin: 0 }}>
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <Tag size={13} style={{ color: '#2563eb' }} />
+                  <span>Address Group *</span>
+                </span>
+                <span className={`badge-group badge-group-${(formData.addressGroup || 'CONTRIBUTOR').toLowerCase()}`} style={{ fontSize: '0.7rem', padding: '1px 6px' }}>
+                  {formData.addressGroup || 'CONTRIBUTOR'}
+                </span>
+              </label>
+              <select
+                name="addressGroup"
+                value={formData.addressGroup || 'CONTRIBUTOR'}
+                onChange={handleChange}
+                required
+                className="form-select"
+                style={{ fontWeight: 700 }}
+              >
+                <option value="VIP">⭐ VIP (Gold)</option>
+                <option value="ADVERTISEMENT">📢 ADVERTISEMENT (Blue)</option>
+                <option value="HELP">🤝 HELP (Green)</option>
+                <option value="CONTRIBUTOR">📋 CONTRIBUTOR (Gray)</option>
+                <option value="CANCEL">🚫 CANCEL (Red)</option>
+                <option value="CALLBACK">📞 CALLBACK (Orange)</option>
+                <option value="MATRIMONY">💍 MATRIMONY (Pink)</option>
+              </select>
             </div>
           </div>
         </div>
+
 
         {/* SECTION 2: Location & Address Details */}
         <div style={{

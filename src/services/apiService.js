@@ -40,12 +40,16 @@ export async function fetchAddresses(params = {}, signal = null) {
   if (params.pincode) query.append('pincode', params.pincode);
   if (params.street) query.append('street', params.street);
   if (params.alphabet && params.alphabet !== 'ALL') query.append('alphabet', params.alphabet);
+  if (params.group && params.group !== 'ALL') query.append('group', params.group);
+  if (params.addressGroup && params.addressGroup !== 'ALL') query.append('group', params.addressGroup);
+  if (params.subscription && params.subscription !== 'ALL') query.append('subscription', params.subscription);
   if (params.sort) query.append('sort', params.sort);
 
   const res = await fetch(`${API_BASE}/addresses?${query.toString()}`, { signal });
   if (!res.ok) throw new Error('Failed to fetch addresses');
   return res.json();
 }
+
 
 export async function fetchAddressById(id) {
   const res = await fetch(`${API_BASE}/address?id=${id}`);
@@ -111,6 +115,20 @@ export async function deleteAddress(id) {
     method: 'DELETE'
   });
   if (!res.ok) throw new Error('Failed to delete address');
+  return res.json();
+}
+
+export async function bulkDeleteAddresses(ids = []) {
+  if (!ids || ids.length === 0) return { success: true, deletedCount: 0 };
+  const res = await fetch(`${API_BASE}/delete-address`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to delete selected addresses');
+  }
   return res.json();
 }
 

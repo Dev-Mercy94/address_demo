@@ -34,6 +34,31 @@ export async function handler(event, context) {
       count: d.count || 0
     }));
 
+    // Group Counts
+    const groupAgg = await collection.aggregate([
+      {
+        $group: {
+          _id: { $ifNull: ['$addressGroup', 'NORMAL'] },
+          count: { $sum: 1 }
+        }
+      }
+    ]).toArray().catch(() => []);
+
+    const groupCounts = {
+      VIP: 0,
+      ADVERTISEMENT: 0,
+      HELP: 0,
+      NORMAL: 0
+    };
+    for (const g of groupAgg) {
+      const key = (g._id || 'NORMAL').toString().trim().toUpperCase();
+      if (groupCounts[key] !== undefined) {
+        groupCounts[key] += g.count;
+      } else {
+        groupCounts.NORMAL += g.count;
+      }
+    }
+
     return jsonResponse(200, {
       totalAddresses,
       totalDistricts: districtList.filter(Boolean).length,
@@ -41,6 +66,7 @@ export async function handler(event, context) {
       recentlyAdded,
       recentlyUpdated,
       topDistricts,
+      groupCounts,
       isAtlas: true
     });
   } catch (err) {
@@ -48,3 +74,4 @@ export async function handler(event, context) {
     return jsonResponse(500, { error: err.message || 'Internal Server Error' });
   }
 }
+

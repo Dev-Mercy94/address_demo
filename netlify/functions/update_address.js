@@ -40,6 +40,19 @@ export async function handler(event, context) {
     delete updates.created_at;
     updates.updated_at = now;
 
+    // Validate addressGroup if provided
+    if (updates.addressGroup !== undefined || updates.group !== undefined) {
+      const rawGroup = (updates.addressGroup || updates.group || 'CONTRIBUTOR').toString().trim().toUpperCase();
+      const validGroups = ['VIP', 'ADVERTISEMENT', 'HELP', 'CONTRIBUTOR', 'CANCEL', 'CALLBACK', 'MATRIMONY'];
+      if (!validGroups.includes(rawGroup) && rawGroup !== 'NORMAL') {
+        return jsonResponse(400, {
+          error: `Invalid addressGroup '${rawGroup}'. Allowed values are: VIP, ADVERTISEMENT, HELP, CONTRIBUTOR, CANCEL, CALLBACK, MATRIMONY.`
+        });
+      }
+      updates.addressGroup = rawGroup === 'NORMAL' ? 'CONTRIBUTOR' : rawGroup;
+      delete updates.group;
+    }
+
     if (updates.name && typeof updates.name === 'string') {
       updates.name = updates.name
         .replace(/(?:Cell|Mobile|Ph|Mob|Tel|Phone)[\s\:\.\-]*\+?\d[\d\s\-]*/gi, '')
@@ -70,10 +83,12 @@ export async function handler(event, context) {
 
     return jsonResponse(200, {
       ...result,
-      _id: result._id.toString()
+      _id: result._id.toString(),
+      addressGroup: result.addressGroup || 'NORMAL'
     });
   } catch (err) {
     console.error('Error in update_address handler:', err);
     return jsonResponse(500, { error: err.message || 'Internal Server Error' });
   }
 }
+

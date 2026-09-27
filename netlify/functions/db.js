@@ -45,6 +45,16 @@ export function escapeRegex(text) {
   return (text || '').replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
 }
 
+export const ALLOWED_ADDRESS_GROUPS = ['VIP', 'ADVERTISEMENT', 'HELP', 'NORMAL'];
+export const DEFAULT_ADDRESS_GROUP = 'NORMAL';
+
+export function normalizeAddressGroup(group) {
+  if (!group || typeof group !== 'string') return DEFAULT_ADDRESS_GROUP;
+  const upper = group.trim().toUpperCase();
+  if (ALLOWED_ADDRESS_GROUPS.includes(upper)) return upper;
+  return null;
+}
+
 export async function getDb() {
   const uri = process.env.MONGODB_URI;
   const dbName = process.env.MONGODB_DATABASE || process.env.MONGODB_DB_NAME || 'address_management_db';
@@ -69,7 +79,17 @@ export async function getDb() {
   cachedClient = client;
   cachedDb = db;
 
+  // Ensure essential indexes on addresses collection asynchronously in background
+  try {
+    const addressesColl = db.collection('addresses');
+    addressesColl.createIndex({ addressGroup: 1 }).catch(() => {});
+    addressesColl.createIndex({ addressGroup: 1, name: 1 }).catch(() => {});
+  } catch (idxErr) {
+    // Non-blocking
+  }
+
   return { client, db };
 }
 
 export { ObjectId };
+

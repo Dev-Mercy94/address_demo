@@ -6,6 +6,8 @@ const AddressTableRow = memo(function AddressTableRow({
   index,
   page,
   limit,
+  isSelected,
+  onToggleSelect,
   isEditing,
   isSaving,
   onStartInlineEdit,
@@ -25,7 +27,8 @@ const AddressTableRow = memo(function AddressTableRow({
         phone: addr.phone || '',
         pincode: addr.pincode || '',
         district: addr.district || '',
-        city: addr.city || ''
+        city: addr.city || '',
+        addressGroup: (addr.addressGroup || 'CONTRIBUTOR').toUpperCase()
       });
     }
   }, [isEditing, addr]);
@@ -51,8 +54,35 @@ const AddressTableRow = memo(function AddressTableRow({
     addr.address_line_2
   ].filter(Boolean).join(', ');
 
+  const currentGroup = (addr.addressGroup || 'CONTRIBUTOR').toUpperCase();
+  const baseGroupClass = currentGroup === 'VIP'
+    ? 'row-group-vip'
+    : (currentGroup === 'ADVERTISEMENT'
+      ? 'row-group-advertisement'
+      : (currentGroup === 'HELP'
+        ? 'row-group-help'
+        : 'row-group-contributor'));
+
+  const rowGroupClass = `${baseGroupClass} ${isSelected ? 'row-selected' : ''}`;
+
   return (
-    <tr>
+    <tr className={rowGroupClass}>
+      {/* Selection Checkbox */}
+      <td style={{ textAlign: 'center', width: '42px' }}>
+        <input
+          type="checkbox"
+          checked={Boolean(isSelected)}
+          onChange={() => onToggleSelect && onToggleSelect(addr._id)}
+          aria-label={`Select address ${addr.name || addr.u_id}`}
+          style={{
+            width: '18px',
+            height: '18px',
+            cursor: 'pointer',
+            accentColor: '#2563eb'
+          }}
+        />
+      </td>
+
       {/* S.No */}
       <td style={{ textAlign: 'center', fontWeight: 600, color: 'var(--text-muted)' }}>
         {serialNo}
@@ -64,8 +94,8 @@ const AddressTableRow = memo(function AddressTableRow({
           fontSize: '0.82rem',
           padding: '4px 8px',
           borderRadius: '4px',
-          backgroundColor: 'rgba(37, 99, 235, 0.12)',
-          color: '#1d4ed8',
+          backgroundColor: 'rgba(245, 158, 11, 0.12)',
+          color: 'var(--warning)',
           fontFamily: 'var(--font-sans)',
           fontVariantNumeric: 'tabular-nums',
           fontFeatureSettings: '"zero" 0',
@@ -129,15 +159,10 @@ const AddressTableRow = memo(function AddressTableRow({
             style={{ padding: '0.25rem 0.5rem', height: '32px' }}
           />
         ) : (
-          <span className="badge" style={{ backgroundColor: 'rgba(37, 99, 235, 0.18)', color: '#3b82f6', border: '1px solid rgba(37, 99, 235, 0.35)', fontWeight: 700 }}>
+          <span className="badge badge-warning" style={{ fontWeight: 700 }}>
             {addr.district}
           </span>
         )}
-      </td>
-
-      {/* State */}
-      <td style={{ color: 'var(--text-primary)', fontSize: '0.85rem', fontWeight: 500 }}>
-        {addr.state || 'Tamil Nadu'}
       </td>
 
       {/* Pincode */}
@@ -151,7 +176,7 @@ const AddressTableRow = memo(function AddressTableRow({
             style={{ padding: '0.25rem 0.5rem', height: '32px', width: '90px' }}
           />
         ) : (
-          <span className="badge badge-primary" style={{ backgroundColor: 'rgba(37, 99, 235, 0.18)', color: '#3b82f6', fontWeight: 700 }}>{addr.pincode}</span>
+          <span className="badge badge-warning" style={{ fontWeight: 700 }}>{addr.pincode}</span>
         )}
       </td>
 
@@ -167,8 +192,32 @@ const AddressTableRow = memo(function AddressTableRow({
           />
         ) : (
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: 'var(--text-primary)' }}>
-            <Phone size={13} style={{ color: '#3b82f6' }} />
+            <Phone size={13} style={{ color: 'var(--warning)' }} />
             {addr.phone || '-'}
+          </span>
+        )}
+      </td>
+
+      {/* Address Group / Category */}
+      <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
+        {isEditing ? (
+          <select
+            value={localFormData.addressGroup || 'CONTRIBUTOR'}
+            onChange={(e) => onEditChange('addressGroup', e.target.value)}
+            className="form-select"
+            style={{ padding: '0.2rem 0.4rem', height: '32px', fontSize: '0.8rem', fontWeight: 700 }}
+          >
+            <option value="VIP">VIP</option>
+            <option value="ADVERTISEMENT">ADVERTISEMENT</option>
+            <option value="HELP">HELP</option>
+            <option value="CONTRIBUTOR">CONTRIBUTOR</option>
+            <option value="CANCEL">CANCEL</option>
+            <option value="CALLBACK">CALLBACK</option>
+            <option value="MATRIMONY">MATRIMONY</option>
+          </select>
+        ) : (
+          <span className={`badge-group badge-group-${currentGroup.toLowerCase()}`}>
+            {currentGroup}
           </span>
         )}
       </td>
@@ -257,6 +306,9 @@ export function AddressTable({
   page,
   limit,
   loading,
+  selectedIds = [],
+  onToggleSelect,
+  onToggleSelectAll,
   onView,
   onEdit,
   onDelete,
@@ -264,6 +316,19 @@ export function AddressTable({
 }) {
   const [editingId, setEditingId] = useState(null);
   const [savingInlineId, setSavingInlineId] = useState(null);
+
+  const selectedSet = React.useMemo(() => new Set(selectedIds || []), [selectedIds]);
+  const isAllSelected = Boolean(
+    addresses &&
+    addresses.length > 0 &&
+    addresses.every(a => selectedSet.has(a._id))
+  );
+  const isSomeSelected = Boolean(
+    addresses &&
+    addresses.length > 0 &&
+    addresses.some(a => selectedSet.has(a._id)) &&
+    !isAllSelected
+  );
 
   const startInlineEdit = useCallback((address) => {
     setEditingId(address._id);
@@ -308,11 +373,14 @@ export function AddressTable({
 
   if (loading && (!addresses || addresses.length === 0)) {
     return (
-      <div className="table-wrapper" style={{ position: 'relative', overflow: 'hidden' }}>
+      <div className="table-wrapper" style={{ position: 'relative', overflowX: 'auto', overflowY: 'hidden' }}>
         <div className="table-top-progress-bar" />
         <table className="data-table">
           <thead>
             <tr>
+              <th style={{ width: '42px', textAlign: 'center' }}>
+                <input type="checkbox" disabled style={{ width: '18px', height: '18px' }} />
+              </th>
               <th style={{ width: '60px', textAlign: 'center' }}>S.No</th>
               <th style={{ width: '85px' }}>U.Id</th>
               <th>Name</th>
@@ -320,9 +388,9 @@ export function AddressTable({
               <th>Area</th>
               <th>City</th>
               <th>District</th>
-              <th>State</th>
               <th>Pincode</th>
               <th>Phone</th>
+              <th style={{ width: '110px', textAlign: 'center' }}>Group</th>
               <th style={{ textAlign: 'center' }}>Subscription</th>
               <th style={{ width: '130px', textAlign: 'center' }}>Actions</th>
             </tr>
@@ -330,6 +398,7 @@ export function AddressTable({
           <tbody>
             {[1, 2, 3, 4, 5].map((i) => (
               <tr key={i} style={{ opacity: 0.6 }}>
+                <td style={{ textAlign: 'center' }}><div className="skeleton-line" style={{ width: '18px', margin: '0 auto' }} /></td>
                 <td style={{ textAlign: 'center' }}><div className="skeleton-line" style={{ width: '24px', margin: '0 auto' }} /></td>
                 <td><div className="skeleton-line" style={{ width: '50px' }} /></td>
                 <td><div className="skeleton-line" style={{ width: '120px' }} /></td>
@@ -337,9 +406,9 @@ export function AddressTable({
                 <td><div className="skeleton-line" style={{ width: '80px' }} /></td>
                 <td><div className="skeleton-line" style={{ width: '70px' }} /></td>
                 <td><div className="skeleton-line" style={{ width: '80px' }} /></td>
-                <td><div className="skeleton-line" style={{ width: '70px' }} /></td>
                 <td><div className="skeleton-line" style={{ width: '60px' }} /></td>
                 <td><div className="skeleton-line" style={{ width: '90px' }} /></td>
+                <td style={{ textAlign: 'center' }}><div className="skeleton-line" style={{ width: '60px', margin: '0 auto' }} /></td>
                 <td style={{ textAlign: 'center' }}><div className="skeleton-line" style={{ width: '20px', margin: '0 auto' }} /></td>
                 <td><div className="skeleton-line" style={{ width: '80px', margin: '0 auto' }} /></td>
               </tr>
@@ -375,11 +444,27 @@ export function AddressTable({
   }
 
   return (
-    <div className="table-wrapper" style={{ position: 'relative' }}>
+    <div className="table-wrapper" style={{ position: 'relative', overflowX: 'auto' }}>
       {loading && <div className="table-top-progress-bar" />}
       <table className="data-table">
         <thead>
           <tr>
+            <th style={{ width: '42px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+              <input
+                type="checkbox"
+                checked={isAllSelected}
+                ref={el => { if (el) el.indeterminate = isSomeSelected; }}
+                onChange={onToggleSelectAll}
+                title={isAllSelected ? "Deselect all on this page" : "Select all on this page"}
+                aria-label="Select all addresses on this page"
+                style={{
+                  width: '18px',
+                  height: '18px',
+                  cursor: 'pointer',
+                  accentColor: '#2563eb'
+                }}
+              />
+            </th>
             <th style={{ width: '60px', textAlign: 'center', whiteSpace: 'nowrap' }}>S.No</th>
             <th style={{ width: '95px', minWidth: '90px', whiteSpace: 'nowrap' }}>U.ID</th>
             <th>Name</th>
@@ -387,9 +472,9 @@ export function AddressTable({
             <th>Area</th>
             <th>City</th>
             <th>District</th>
-            <th>State</th>
             <th>Pincode</th>
             <th>Phone</th>
+            <th style={{ width: '120px', textAlign: 'center', whiteSpace: 'nowrap' }}>Group</th>
             <th style={{ textAlign: 'center' }}>Subscription</th>
             <th style={{ width: '130px', textAlign: 'center' }}>Actions</th>
           </tr>
@@ -402,6 +487,8 @@ export function AddressTable({
               index={index}
               page={page}
               limit={limit}
+              isSelected={selectedSet.has(addr._id)}
+              onToggleSelect={onToggleSelect}
               isEditing={editingId === addr._id}
               isSaving={savingInlineId === addr._id}
               onStartInlineEdit={startInlineEdit}
@@ -418,3 +505,4 @@ export function AddressTable({
     </div>
   );
 }
+

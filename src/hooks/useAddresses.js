@@ -11,6 +11,7 @@ export function useAddresses(initialParams = {}, onStatsChange = null) {
     pincode: '',
     street: '',
     alphabet: 'ALL',
+    group: 'ALL',
     sort: 'name_asc',
     ...initialParams
   });
@@ -20,6 +21,13 @@ export function useAddresses(initialParams = {}, onStatsChange = null) {
   const [data, setData] = useState({
     addresses: [],
     total: 0,
+    totalDatabaseCount: 0,
+    groupCounts: {
+      VIP: 0,
+      ADVERTISEMENT: 0,
+      HELP: 0,
+      CONTRIBUTOR: 0
+    },
     page: 1,
     limit: 50,
     totalPages: 1
@@ -44,6 +52,7 @@ export function useAddresses(initialParams = {}, onStatsChange = null) {
         street: initialParams.street !== undefined ? initialParams.street : prev.street,
         u_id: initialParams.u_id !== undefined ? initialParams.u_id : prev.u_id,
         alphabet: initialParams.alphabet !== undefined ? initialParams.alphabet : prev.alphabet,
+        group: initialParams.group !== undefined ? initialParams.group : (initialParams.addressGroup !== undefined ? initialParams.addressGroup : prev.group),
         sort: initialParams.sort !== undefined ? initialParams.sort : prev.sort,
       }));
       if (initialParams.search !== undefined) {
@@ -87,6 +96,10 @@ export function useAddresses(initialParams = {}, onStatsChange = null) {
     setParams(prev => ({ ...prev, alphabet, page: 1 }));
   }, []);
 
+  const setGroup = useCallback((group) => {
+    setParams(prev => ({ ...prev, group: group || 'ALL', page: 1 }));
+  }, []);
+
   const setSort = useCallback((sort) => {
     setParams(prev => ({ ...prev, sort, page: 1 }));
   }, []);
@@ -109,6 +122,7 @@ export function useAddresses(initialParams = {}, onStatsChange = null) {
       pincode: '',
       street: '',
       alphabet: 'ALL',
+      group: 'ALL',
       sort: 'name_asc'
     });
     setDebouncedSearch('');
@@ -123,12 +137,47 @@ export function useAddresses(initialParams = {}, onStatsChange = null) {
   // Instant optimistic deletion from local state (0ms latency!)
   const optimisticDelete = useCallback((id) => {
     setData(prev => {
+      const deletedItem = (prev.addresses || []).find(item => item._id === id);
       const remaining = (prev.addresses || []).filter(item => item._id !== id);
       const newTotal = Math.max(0, (prev.total || remaining.length) - 1);
+      const groupKey = (deletedItem?.addressGroup || 'CONTRIBUTOR').toUpperCase();
+      const updatedGroupCounts = { ...prev.groupCounts };
+      if (updatedGroupCounts[groupKey] !== undefined) {
+        updatedGroupCounts[groupKey] = Math.max(0, updatedGroupCounts[groupKey] - 1);
+      }
       return {
         ...prev,
         addresses: remaining,
         total: newTotal,
+        totalDatabaseCount: Math.max(0, (prev.totalDatabaseCount || newTotal) - 1),
+        groupCounts: updatedGroupCounts,
+        totalPages: Math.max(1, Math.ceil(newTotal / (prev.limit || 50)))
+      };
+    });
+  }, []);
+
+  // Instant optimistic bulk deletion from local state (0ms latency!)
+  const optimisticBulkDelete = useCallback((ids = []) => {
+    if (!ids || ids.length === 0) return;
+    const idSet = new Set(ids);
+    setData(prev => {
+      const deletedItems = (prev.addresses || []).filter(item => idSet.has(item._id));
+      const remaining = (prev.addresses || []).filter(item => !idSet.has(item._id));
+      const countDeleted = deletedItems.length;
+      const newTotal = Math.max(0, (prev.total || 0) - countDeleted);
+      const updatedGroupCounts = { ...prev.groupCounts };
+      deletedItems.forEach(item => {
+        const groupKey = (item?.addressGroup || 'CONTRIBUTOR').toUpperCase();
+        if (updatedGroupCounts[groupKey] !== undefined) {
+          updatedGroupCounts[groupKey] = Math.max(0, updatedGroupCounts[groupKey] - 1);
+        }
+      });
+      return {
+        ...prev,
+        addresses: remaining,
+        total: newTotal,
+        totalDatabaseCount: Math.max(0, (prev.totalDatabaseCount || 0) - countDeleted),
+        groupCounts: updatedGroupCounts,
         totalPages: Math.max(1, Math.ceil(newTotal / (prev.limit || 50)))
       };
     });
@@ -136,12 +185,33 @@ export function useAddresses(initialParams = {}, onStatsChange = null) {
 
   // Instant optimistic update in local state (0ms latency!)
   const optimisticUpdate = useCallback((id, updates) => {
-    setData(prev => ({
-      ...prev,
-      addresses: (prev.addresses || []).map(item =>
-        item._id === id ? { ...item, ...updates } : item
-      )
-    }));
+    setData(prev => {
+      let oldGroup = null;
+      const updatedList = (prev.addresses || []).map(item => {
+        if (item._id === id) {
+          oldGroup = (item.addressGroup || 'CONTRIBUTOR').toUpperCase();
+          return { ...item, ...updates };
+        }
+        return item;
+      });
+
+      let updatedGroupCounts = { ...prev.groupCounts };
+      if (updates.addressGroup && oldGroup && updates.addressGroup.toUpperCase() !== oldGroup) {
+        const newGroup = updates.addressGroup.toUpperCase();
+        if (updatedGroupCounts[oldGroup] !== undefined) {
+          updatedGroupCounts[oldGroup] = Math.max(0, updatedGroupCounts[oldGroup] - 1);
+        }
+        if (updatedGroupCounts[newGroup] !== undefined) {
+          updatedGroupCounts[newGroup] = (updatedGroupCounts[newGroup] || 0) + 1;
+        }
+      }
+
+      return {
+        ...prev,
+        addresses: updatedList,
+        groupCounts: updatedGroupCounts
+      };
+    });
   }, []);
 
   const loadData = useCallback(async () => {
@@ -164,16 +234,8 @@ export function useAddresses(initialParams = {}, onStatsChange = null) {
       setData(res);
       const statsCallback = onStatsChangeRef.current;
       if (statsCallback && typeof statsCallback === 'function') {
-        const hasFilters = Boolean(
-          debouncedSearch ||
-          debouncedUId ||
-          (params.district && params.district !== 'ALL') ||
-          params.pincode ||
-          params.street ||
-          (params.alphabet && params.alphabet !== 'ALL')
-        );
-        if (!hasFilters && typeof res.total === 'number') {
-          statsCallback({ totalAddresses: res.total });
+        if (typeof res.totalDatabaseCount === 'number' || typeof res.total === 'number') {
+          statsCallback({ totalAddresses: res.totalDatabaseCount ?? res.total, groupCounts: res.groupCounts });
         } else {
           statsCallback();
         }
@@ -191,7 +253,7 @@ export function useAddresses(initialParams = {}, onStatsChange = null) {
         setInitialLoading(false);
       }
     }
-  }, [params.page, params.limit, debouncedUId, params.district, params.pincode, params.street, params.alphabet, params.sort, debouncedSearch]);
+  }, [params.page, params.limit, debouncedUId, params.district, params.pincode, params.street, params.alphabet, params.group, params.sort, debouncedSearch]);
 
   useEffect(() => {
     loadData();
@@ -205,6 +267,8 @@ export function useAddresses(initialParams = {}, onStatsChange = null) {
   return {
     addresses: data.addresses,
     total: data.total,
+    totalDatabaseCount: data.totalDatabaseCount || data.total,
+    groupCounts: data.groupCounts || { VIP: 0, ADVERTISEMENT: 0, HELP: 0, CONTRIBUTOR: 0 },
     page: data.page,
     limit: data.limit,
     totalPages: data.totalPages,
@@ -218,12 +282,15 @@ export function useAddresses(initialParams = {}, onStatsChange = null) {
     setPincode,
     setStreet,
     setAlphabet,
+    setGroup,
     setSort,
     setPage,
     setLimit,
     clearFilters,
     refetch: loadData,
     optimisticDelete,
+    optimisticBulkDelete,
     optimisticUpdate
   };
 }
+

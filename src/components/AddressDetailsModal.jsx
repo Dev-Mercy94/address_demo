@@ -32,12 +32,15 @@ export function AddressDetailsModal({ address, onClose, onEdit, onDelete }) {
             </div>
             <div>
               <h2 style={{ fontSize: '1.3rem', lineHeight: 1.2 }}>{address.name}</h2>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.2rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.3rem', flexWrap: 'wrap' }}>
                 {address.u_id && (
                   <span style={{ fontSize: '0.8rem', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', backgroundColor: 'rgba(79, 70, 229, 0.1)', color: '#4f46e5', fontFamily: 'var(--font-sans)', fontVariantNumeric: 'tabular-nums', fontFeatureSettings: '"zero" 0' }}>
                     U.Id: {address.u_id}
                   </span>
                 )}
+                <span className={`badge-group badge-group-${(address.addressGroup || 'CONTRIBUTOR').toLowerCase()}`}>
+                  {address.addressGroup || 'CONTRIBUTOR'}
+                </span>
               </div>
             </div>
           </div>
@@ -53,6 +56,15 @@ export function AddressDetailsModal({ address, onClose, onEdit, onDelete }) {
 
         {/* Modal Content Details Grid */}
         <div className="address-details-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.15rem', marginBottom: '1.5rem' }}>
+          <div>
+            <div className="form-label">Address Group / Category</div>
+            <div style={{ marginTop: '0.2rem' }}>
+              <span className={`badge-group badge-group-${(address.addressGroup || 'CONTRIBUTOR').toLowerCase()}`}>
+                {address.addressGroup || 'CONTRIBUTOR'}
+              </span>
+            </div>
+          </div>
+
           <div>
             <div className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
               <MapPin size={14} /> Door No / Address Line 1

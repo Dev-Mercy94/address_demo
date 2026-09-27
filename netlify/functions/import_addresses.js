@@ -59,6 +59,13 @@ export async function handler(event, context) {
         continue;
       }
 
+      let rawGroup = (item.addressGroup || item.address_group || item.group || item['Address Group'] || item['Group'] || 'CONTRIBUTOR').toString().trim().toUpperCase();
+      const validGroups = ['VIP', 'ADVERTISEMENT', 'HELP', 'CONTRIBUTOR', 'CANCEL', 'CALLBACK', 'MATRIMONY'];
+      if (!validGroups.includes(rawGroup) && rawGroup !== 'NORMAL') {
+        rawGroup = 'CONTRIBUTOR';
+      }
+      const finalGroup = rawGroup === 'NORMAL' ? 'CONTRIBUTOR' : rawGroup;
+
       const doc = {
         u_id: (item.u_id || item.code || item.uId || '').trim(),
         name,
@@ -72,6 +79,7 @@ export async function handler(event, context) {
         country: (item.country || 'India').trim(),
         pincode,
         phone,
+        addressGroup: finalGroup,
         landmark: (item.landmark || '').trim(),
         notes: (item.notes || '').trim(),
         subscription: Boolean(item.subscription),
@@ -81,6 +89,7 @@ export async function handler(event, context) {
         created_at: now,
         updated_at: now
       };
+
 
       if (!forceSave) {
         const nameLower = name.toLowerCase();

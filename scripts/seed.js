@@ -31,6 +31,8 @@ async function seedDatabase() {
     await collection.createIndex({ district: 1 });
     await collection.createIndex({ city: 1 });
     await collection.createIndex({ phone: 1 });
+    await collection.createIndex({ addressGroup: 1 });
+    await collection.createIndex({ addressGroup: 1, name: 1 });
     await collection.createIndex({ district: 1, pincode: 1, name: 1 });
 
     console.log('Clearing existing address records...');
@@ -58,6 +60,7 @@ async function seedDatabase() {
     const lastNames = ['Kumar', 'Sharma', 'Verma', 'Patel', 'Subramanian', 'Raman', 'Narayanan', 'Pillai', 'Mudaliar', 'Gounder', 'Nadar', 'Chettiar', 'Naidu', 'Rao', 'Iyer', 'Iyengar', 'Reddy', 'Singh', 'Gupta', 'Menon', 'Nair'];
     const streets = ['Main Street', 'Cross Street', 'Station Road', 'Bazaar Street', 'Temple Road', 'Gandhi Road', 'Nehru Salai', 'Anna Salai', 'Ring Road', 'Hospital Road', 'College Road', 'School Street'];
     const landmarks = ['Near Bus Stand', 'Opposite Railway Station', 'Behind Post Office', 'Near Signal', 'Near Temple', 'Opposite Supermarket', 'Next to SBI Bank'];
+    const groups = ['VIP', 'ADVERTISEMENT', 'HELP', 'NORMAL', 'NORMAL', 'NORMAL', 'NORMAL', 'NORMAL'];
 
     let totalInserted = 0;
     const now = new Date().toISOString();
@@ -84,6 +87,7 @@ async function seedDatabase() {
           country: 'India',
           pincode: dObj.pincodes[idx % dObj.pincodes.length],
           phone: `987${(1000000 + (idx * 137) % 8999999).toString()}`,
+          addressGroup: groups[idx % groups.length],
           landmark: landmarks[idx % landmarks.length],
           notes: idx % 10 === 0 ? 'Verified Address' : '',
           created_at: now,
@@ -95,6 +99,7 @@ async function seedDatabase() {
       totalInserted += result.insertedCount;
       console.log(`Inserted batch ${b / batchSize + 1}: ${totalInserted.toLocaleString()} / ${totalTarget.toLocaleString()} records`);
     }
+
 
     console.log(`Successfully seeded ${totalInserted.toLocaleString()} address records into MongoDB Atlas!`);
   } catch (error) {
