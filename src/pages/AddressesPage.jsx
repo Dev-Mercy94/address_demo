@@ -375,6 +375,36 @@ export function AddressesPage({ initialParams, onEditAddress, onAddAddress, onSt
               {(groupCounts?.MATRIMONY || 0).toLocaleString()}
             </div>
           </div>
+
+          {/* PAYLATER Group Card */}
+          <div
+            onClick={() => setGroup(currentGroupFilter === 'PAYLATER' ? 'ALL' : 'PAYLATER')}
+            className={`group-summary-card group-summary-card-paylater ${currentGroupFilter === 'PAYLATER' ? 'active-group-filter' : ''}`}
+            title="Click to filter by Paylater group"
+          >
+            <div className="group-card-top-row">
+              <span className="group-card-title" style={{ color: '#4338ca' }}>⏳ PAYLATER</span>
+              <span className="group-card-indicator" style={{ backgroundColor: '#6366f1' }} />
+            </div>
+            <div className="group-card-count" style={{ color: '#4338ca' }}>
+              {(groupCounts?.PAYLATER || 0).toLocaleString()}
+            </div>
+          </div>
+
+          {/* NEWS Group Card */}
+          <div
+            onClick={() => setGroup(currentGroupFilter === 'NEWS' ? 'ALL' : 'NEWS')}
+            className={`group-summary-card group-summary-card-news ${currentGroupFilter === 'NEWS' ? 'active-group-filter' : ''}`}
+            title="Click to filter by News group"
+          >
+            <div className="group-card-top-row">
+              <span className="group-card-title" style={{ color: '#0f766e' }}>📰 NEWS</span>
+              <span className="group-card-indicator" style={{ backgroundColor: '#14b8a6' }} />
+            </div>
+            <div className="group-card-count" style={{ color: '#0f766e' }}>
+              {(groupCounts?.NEWS || 0).toLocaleString()}
+            </div>
+          </div>
         </div>
       </div>
 

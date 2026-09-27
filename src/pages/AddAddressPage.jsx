@@ -32,6 +32,19 @@ const DISTRICTS_LIST = [
   'Viluppuram', 'Virudhunagar'
 ];
 
+const getCurrentDateTime = () => {
+  const now = new Date();
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const dateStr = `${String(now.getDate()).padStart(2, '0')}-${months[now.getMonth()]}-${now.getFullYear()}`;
+  let hours = now.getHours();
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12;
+  hours = hours ? hours : 12;
+  const timeStr = `${hours}:${minutes} ${ampm}`;
+  return { dateStr, timeStr };
+};
+
 export function AddAddressPage({ initialData = null, onNavigate, onComplete, onStatsChange }) {
   const isEditing = Boolean(initialData && initialData._id);
 
@@ -53,8 +66,8 @@ export function AddAddressPage({ initialData = null, onNavigate, onComplete, onS
     landmark: '',
     notes: '',
     subscription: false,
-    subscription_date: '31-Aug-2026',
-    subscription_time: '10:35 AM',
+    subscription_date: getCurrentDateTime().dateStr,
+    subscription_time: getCurrentDateTime().timeStr,
     subscription_amount: 500
   });
 
@@ -84,8 +97,8 @@ export function AddAddressPage({ initialData = null, onNavigate, onComplete, onS
         landmark: initialData.landmark || '',
         notes: initialData.notes || '',
         subscription: Boolean(initialData.subscription),
-        subscription_date: initialData.subscription_date || '31-Aug-2026',
-        subscription_time: initialData.subscription_time || '10:35 AM',
+        subscription_date: initialData.subscription_date || getCurrentDateTime().dateStr,
+        subscription_time: initialData.subscription_time || getCurrentDateTime().timeStr,
         subscription_amount: initialData.subscription_amount !== undefined ? initialData.subscription_amount : 500
       });
     }
@@ -171,8 +184,8 @@ export function AddAddressPage({ initialData = null, onNavigate, onComplete, onS
           landmark: '',
           notes: '',
           subscription: false,
-          subscription_date: '31-Aug-2026',
-          subscription_time: '10:35 AM',
+          subscription_date: getCurrentDateTime().dateStr,
+          subscription_time: getCurrentDateTime().timeStr,
           subscription_amount: 500
         });
       } else {
@@ -355,6 +368,8 @@ export function AddAddressPage({ initialData = null, onNavigate, onComplete, onS
                 <option value="CANCEL">🚫 CANCEL (Red)</option>
                 <option value="CALLBACK">📞 CALLBACK (Orange)</option>
                 <option value="MATRIMONY">💍 MATRIMONY (Pink)</option>
+                <option value="PAYLATER">⏳ PAYLATER (Indigo)</option>
+                <option value="NEWS">📰 NEWS (Teal)</option>
               </select>
             </div>
           </div>
@@ -501,7 +516,7 @@ export function AddAddressPage({ initialData = null, onNavigate, onComplete, onS
           </div>
         </div>
 
-        {/* SECTION 3: Landmark & Additional Notes */}
+        {/* SECTION 3: Landmark */}
         <div style={{
           backgroundColor: 'var(--bg-secondary)',
           borderRadius: '0.85rem',
@@ -511,11 +526,11 @@ export function AddAddressPage({ initialData = null, onNavigate, onComplete, onS
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
             <Compass size={18} style={{ color: '#f59e0b' }} />
             <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-              3. Landmark & Internal Notes
+              3. Landmark
             </h3>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem' }}>
             {/* Landmark */}
             <div className="form-group" style={{ margin: 0 }}>
               <label className="form-label">Landmark</label>
@@ -525,19 +540,6 @@ export function AddAddressPage({ initialData = null, onNavigate, onComplete, onS
                 value={formData.landmark}
                 onChange={handleChange}
                 placeholder="e.g. Behind Water Tank"
-                className="form-input"
-              />
-            </div>
-
-            {/* Notes */}
-            <div className="form-group" style={{ margin: 0 }}>
-              <label className="form-label">Additional Notes</label>
-              <input
-                type="text"
-                name="notes"
-                value={formData.notes}
-                onChange={handleChange}
-                placeholder="Internal tags or delivery instructions..."
                 className="form-input"
               />
             </div>
@@ -588,8 +590,8 @@ export function AddAddressPage({ initialData = null, onNavigate, onComplete, onS
                 setFormData(prev => ({
                   ...prev,
                   subscription: checked,
-                  subscription_date: checked ? (prev.subscription_date || '31-Aug-2026') : prev.subscription_date,
-                  subscription_time: checked ? (prev.subscription_time || '10:35 AM') : prev.subscription_time,
+                  subscription_date: checked ? (prev.subscription_date || getCurrentDateTime().dateStr) : prev.subscription_date,
+                  subscription_time: checked ? (prev.subscription_time || getCurrentDateTime().timeStr) : prev.subscription_time,
                   subscription_amount: checked ? (prev.subscription_amount || 500) : prev.subscription_amount
                 }));
               }}
@@ -666,6 +668,38 @@ export function AddAddressPage({ initialData = null, onNavigate, onComplete, onS
               </div>
             </div>
           )}
+        </div>
+
+        {/* SECTION 5: Additional Notes */}
+        <div style={{
+          backgroundColor: 'var(--bg-secondary)',
+          borderRadius: '0.85rem',
+          border: '1px solid var(--border-color)',
+          padding: '1.15rem'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+            <FileText size={18} style={{ color: '#8b5cf6' }} />
+            <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+              5. Additional Notes
+            </h3>
+          </div>
+
+          <div className="form-group" style={{ margin: 0 }}>
+            <textarea
+              name="notes"
+              value={formData.notes}
+              onChange={handleChange}
+              placeholder="Add any internal tags, delivery instructions, or extra details here..."
+              className="form-input"
+              style={{
+                minHeight: '100px',
+                resize: 'vertical',
+                lineHeight: '1.5',
+                padding: '0.75rem',
+                fontFamily: 'inherit'
+              }}
+            />
+          </div>
         </div>
 
         {/* Action Buttons Footer */}

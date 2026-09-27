@@ -34,32 +34,32 @@ export function getExportFilename(filterInfo, extension = 'pdf') {
   return `${cleanPrefix}_${dateStr}.${extension}`;
 }
 
-let html2pdfLoader = null;
+let depsLoaded = false;
 
-function loadHtml2PdfLibrary() {
-  if (window.html2pdf) return Promise.resolve(window.html2pdf);
-  if (html2pdfLoader) return html2pdfLoader;
-
-  html2pdfLoader = new Promise((resolve, reject) => {
-    const existing = document.querySelector('script[src*="html2pdf"]');
-    if (existing && window.html2pdf) {
-      return resolve(window.html2pdf);
-    }
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
-    script.crossOrigin = 'anonymous';
-    script.onload = () => {
-      if (window.html2pdf) {
-        resolve(window.html2pdf);
-      } else {
-        reject(new Error('html2pdf library loaded but global object not found'));
-      }
+function loadPdfDependencies() {
+  if (depsLoaded && window.html2canvas && window.jspdf) return Promise.resolve();
+  
+  return new Promise((resolve, reject) => {
+    const loadScript = (src, globalName) => {
+      return new Promise((res, rej) => {
+        if (window[globalName]) return res();
+        const script = document.createElement('script');
+        script.src = src;
+        script.crossOrigin = 'anonymous';
+        script.onload = () => res();
+        script.onerror = () => rej(new Error(`Failed to load ${src}`));
+        document.head.appendChild(script);
+      });
     };
-    script.onerror = () => reject(new Error('Failed to load html2pdf library'));
-    document.head.appendChild(script);
-  });
 
-  return html2pdfLoader;
+    Promise.all([
+      loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js', 'html2canvas'),
+      loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', 'jspdf')
+    ]).then(() => {
+      depsLoaded = true;
+      resolve();
+    }).catch(reject);
+  });
 }
 
 /**
@@ -99,7 +99,7 @@ export async function exportAddressesToPdf(addresses = [], filterInfo = 'All Dis
     return { success: false, message: 'No records available to export', count: 0 };
   }
 
-  await loadHtml2PdfLibrary();
+  await loadPdfDependencies();
 
   const rawFileName = getExportFilename(filterInfo, 'pdf');
   const fileName = rawFileName.endsWith('.pdf') ? rawFileName : `${rawFileName}.pdf`;
@@ -201,7 +201,7 @@ export async function exportAddressesToPdf(addresses = [], filterInfo = 'All Dis
       height: 119.3px;
       max-height: 119.3px;
       vertical-align: top;
-      padding: 3px 4.5px;
+      padding: 2.5px 4px;
       box-sizing: border-box;
       border: 1px solid #000000;
       overflow: hidden;
@@ -212,8 +212,8 @@ export async function exportAddressesToPdf(addresses = [], filterInfo = 'All Dis
       display: flex;
       flex-direction: column;
       justify-content: flex-start;
-      font-size: 8.5px;
-      line-height: 1.22;
+      font-size: 8px;
+      line-height: 1.15;
       color: #000000;
       overflow: hidden;
       word-break: break-word;
@@ -241,13 +241,16 @@ export async function exportAddressesToPdf(addresses = [], filterInfo = 'All Dis
     const html2canvas = window.html2canvas;
     const JsPdfConstructor = window.jspdf?.jsPDF || window.jsPDF;
 
-    if (html2canvas && JsPdfConstructor) {
-      const pdf = new JsPdfConstructor({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
-        compress: true
-      });
+    if (!html2canvas || !JsPdfConstructor) {
+      throw new Error("Failed to load PDF libraries.");
+    }
+
+    const pdf = new JsPdfConstructor({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4',
+      compress: true
+    });
 
       for (let p = 0; p < totalPages; p++) {
         const pageNum = p + 1;
@@ -321,55 +324,6 @@ export async function exportAddressesToPdf(addresses = [], filterInfo = 'All Dis
       }, 5000);
 
       return { success: true, fileName, count: addresses.length };
-    } else {
-      // Fallback html2pdf
-      const html2pdf = await loadHtml2PdfLibrary();
-      const allPagesHtml = [];
-      for (let p = 0; p < totalPages; p++) {
-        const pageNum = p + 1;
-        const pageAddresses = addresses.slice(p * PAGE_SIZE, (p + 1) * PAGE_SIZE);
-
-        const rowChunks = [];
-        for (let r = 0; r < 9; r++) {
-          rowChunks.push(pageAddresses.slice(r * 4, (r + 1) * 4));
-        }
-
-        const rowsHtml = rowChunks.map(row => {
-          const cellsHtml = [0, 1, 2, 3].map(c => {
-            const item = row[c];
-            if (item) return `<td>${renderDirectoryAddressBox(item)}</td>`;
-            else return `<td><div class="address-cell-content" style="visibility: hidden;"></div></td>`;
-          }).join('');
-          return `<tr>${cellsHtml}</tr>`;
-        }).join('');
-
-        allPagesHtml.push(`
-          <div class="pdf-page-container" style="page-break-after: always;">
-            <div class="page-header">
-              <div class="header-title">${escapeHtml(subHeaderTitle)}</div>
-              <div class="header-page-num">${pageNum}</div>
-            </div>
-            <table class="grid-table">
-              <tbody>
-                ${rowsHtml}
-              </tbody>
-            </table>
-          </div>
-        `);
-      }
-      iframe.contentDocument.body.innerHTML = allPagesHtml.join('');
-      await new Promise(r => setTimeout(r, 200));
-
-      const opt = {
-        margin: 0,
-        filename: fileName,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      };
-      await html2pdf().set(opt).from(iframe.contentDocument.body).save();
-      return { success: true, fileName, count: addresses.length };
-    }
   } catch (err) {
     console.error('PDF export error:', err);
     throw err;
@@ -442,14 +396,14 @@ function renderDirectoryAddressBox(addr) {
 
   return `
     <div class="address-cell-content">
-      ${uId ? `<div style="font-weight: 800; font-size: 9.2px; color: #000000; margin-bottom: 0.5px; font-family: 'JetBrains Mono', monospace, Arial, sans-serif;">${escapeHtml(uId)}</div>` : ''}
-      ${name ? `<div style="font-weight: 700; font-size: 9.2px; color: #000000; margin-bottom: 0.5px;">${escapeHtml(name)}</div>` : ''}
-      ${notes ? `<div style="font-size: 8.2px; color: #000000; font-weight: 500;">${escapeHtml(notes)}</div>` : ''}
-      ${streetLine ? `<div style="font-size: 8.2px; color: #000000;">${escapeHtml(streetLine)}</div>` : ''}
-      ${areaLine ? `<div style="font-size: 8.2px; color: #000000;">${escapeHtml(areaLine)}</div>` : ''}
-      ${cityLine ? `<div style="font-size: 8.2px; color: #000000;">${escapeHtml(cityLine)}</div>` : ''}
-      ${districtLine ? `<div style="font-size: 8.2px; color: #000000;">${escapeHtml(districtLine)}</div>` : ''}
-      ${phoneStr ? `<div style="font-weight: 700; font-size: 8.6px; color: #000000; margin-top: auto; padding-top: 1px;">${escapeHtml(phoneStr)}</div>` : ''}
+      ${uId ? `<div style="font-weight: 800; font-size: 8.8px; color: #000000; margin-bottom: 0.5px; font-family: 'Noto Sans Tamil', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; font-variant-numeric: tabular-nums; font-feature-settings: 'zero' 0;">${escapeHtml(uId)}</div>` : ''}
+      ${name ? `<div style="font-weight: 700; font-size: 8.8px; color: #000000; margin-bottom: 0.5px;">${escapeHtml(name)}</div>` : ''}
+      ${notes ? `<div style="font-size: 8px; color: #000000; font-weight: 500;">${escapeHtml(notes)}</div>` : ''}
+      ${streetLine ? `<div style="font-size: 8px; color: #000000;">${escapeHtml(streetLine)}</div>` : ''}
+      ${areaLine ? `<div style="font-size: 8px; color: #000000;">${escapeHtml(areaLine)}</div>` : ''}
+      ${cityLine ? `<div style="font-size: 8px; color: #000000;">${escapeHtml(cityLine)}</div>` : ''}
+      ${districtLine ? `<div style="font-size: 8px; color: #000000;">${escapeHtml(districtLine)}</div>` : ''}
+      ${phoneStr ? `<div style="font-weight: 700; font-size: 8.4px; color: #000000; margin-top: auto; padding-top: 1px;">${escapeHtml(phoneStr)}</div>` : ''}
     </div>
   `;
 }

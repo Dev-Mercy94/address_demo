@@ -33,6 +33,11 @@ export function FilterBar({
           <option value="ADVERTISEMENT">📢 ADVERTISEMENT</option>
           <option value="HELP">🤝 HELP</option>
           <option value="CONTRIBUTOR">📋 CONTRIBUTOR</option>
+          <option value="CANCEL">🚫 CANCEL</option>
+          <option value="CALLBACK">📞 CALLBACK</option>
+          <option value="MATRIMONY">💍 MATRIMONY</option>
+          <option value="PAYLATER">⏳ PAYLATER</option>
+          <option value="NEWS">📰 NEWS</option>
         </select>
       </div>
 

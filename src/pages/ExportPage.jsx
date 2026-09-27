@@ -511,6 +511,8 @@ export function ExportPage() {
                   <option value="CANCEL">CANCEL</option>
                   <option value="CALLBACK">CALLBACK</option>
                   <option value="MATRIMONY">MATRIMONY</option>
+                  <option value="PAYLATER">PAYLATER</option>
+                  <option value="NEWS">NEWS</option>
                 </select>
               </div>
 

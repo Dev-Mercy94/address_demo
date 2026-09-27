@@ -55,13 +55,7 @@ const AddressTableRow = memo(function AddressTableRow({
   ].filter(Boolean).join(', ');
 
   const currentGroup = (addr.addressGroup || 'CONTRIBUTOR').toUpperCase();
-  const baseGroupClass = currentGroup === 'VIP'
-    ? 'row-group-vip'
-    : (currentGroup === 'ADVERTISEMENT'
-      ? 'row-group-advertisement'
-      : (currentGroup === 'HELP'
-        ? 'row-group-help'
-        : 'row-group-contributor'));
+  const baseGroupClass = `row-group-${currentGroup.toLowerCase()}`;
 
   const rowGroupClass = `${baseGroupClass} ${isSelected ? 'row-selected' : ''}`;
 
@@ -214,6 +208,8 @@ const AddressTableRow = memo(function AddressTableRow({
             <option value="CANCEL">CANCEL</option>
             <option value="CALLBACK">CALLBACK</option>
             <option value="MATRIMONY">MATRIMONY</option>
+            <option value="PAYLATER">PAYLATER</option>
+            <option value="NEWS">NEWS</option>
           </select>
         ) : (
           <span className={`badge-group badge-group-${currentGroup.toLowerCase()}`}>
