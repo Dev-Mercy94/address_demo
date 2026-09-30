@@ -384,7 +384,35 @@ export function ImportPage({ onNavigate, onStatsChange }) {
           skipEmptyLines: true,
           complete: (results) => {
             const rows = results.data || [];
-            const parsed = rows.map(r => ({
+            const parsed = rows.map(r => {
+              let rawPin = r.Pincode || r.pincode;
+              let rawDistrict = r.District || r.district || '';
+              
+              let parsedPincode = sanitizePincode(rawPin, rawDistrict);
+              let finalDistrict = getTamilDistrict(convertBaminiToUnicode(rawDistrict.trim()));
+
+              if (!finalDistrict || finalDistrict === '') {
+                if (parsedPincode) {
+                  if (parsedPincode.startsWith('628')) finalDistrict = 'Thoothukudi';
+                  else if (parsedPincode.startsWith('627')) finalDistrict = 'Tenkasi';
+                  else if (parsedPincode.startsWith('625')) finalDistrict = 'Madurai';
+                  else if (parsedPincode.startsWith('641') || parsedPincode.startsWith('642')) finalDistrict = 'Coimbatore';
+                  else if (parsedPincode.startsWith('600')) finalDistrict = 'Chennai';
+                  else if (parsedPincode.startsWith('622')) finalDistrict = 'Pudukkottai';
+                  else finalDistrict = 'Tenkasi';
+                } else {
+                  finalDistrict = 'Tenkasi';
+                }
+              }
+
+              // For safety, let's just use finalDistrict if rawDistrict was empty.
+              if (!rawDistrict) {
+                 if (parsedPincode.startsWith('628')) finalDistrict = 'Thoothukudi';
+                 else if (parsedPincode.startsWith('627')) finalDistrict = 'Tenkasi'; // Default to Tenkasi if empty, user must explicitly say Tirunelveli
+                 else if (parsedPincode.startsWith('622')) finalDistrict = 'Pudukkottai';
+              }
+
+              return {
               u_id: sanitizeUId(r['U.Id'] || r.u_id || r.code || ''),
               name: (r.Name || r.name)
                 ? convertBaminiToUnicode((r.Name || r.name).trim())
@@ -397,15 +425,15 @@ export function ImportPage({ onNavigate, onStatsChange }) {
                 : 'Contact Name',
               door_no: (r['Door No'] || r.door_no) ? convertBaminiToUnicode((r['Door No'] || r.door_no).trim()) : '',
               address_line_1: (r['Address Line 1'] || r.Address || r.address_line_1)
-                ? stripDistrictFromAddressLine(convertBaminiToUnicode((r['Address Line 1'] || r.Address || r.address_line_1).trim()), r.District || r.district)
+                ? stripDistrictFromAddressLine(convertBaminiToUnicode((r['Address Line 1'] || r.Address || r.address_line_1).trim()), finalDistrict)
                 : 'Address Line',
               address_line_2: convertBaminiToUnicode((r['Address Line 2'] || r.address_line_2 || '').trim()),
-              area: convertBaminiToUnicode((r.Area || r.City || r.area || 'Coimbatore').trim()),
-              city: convertBaminiToUnicode((r.City || r.city || 'Coimbatore').trim()),
-              district: getTamilDistrict(convertBaminiToUnicode((r.District || r.district || 'Coimbatore').trim())),
+              area: convertBaminiToUnicode((r.Area || r.City || r.area || finalDistrict).trim()),
+              city: convertBaminiToUnicode((r.City || r.city || finalDistrict).trim()),
+              district: finalDistrict,
               state: convertBaminiToUnicode((r.State || r.state || 'Tamil Nadu').trim()),
               country: (r.Country || r.country || 'India').trim(),
-              pincode: sanitizePincode(r.Pincode || r.pincode, r.District || r.district),
+              pincode: parsedPincode,
               phone: (r.Phone || r.phone || '').trim(),
               addressGroup: (() => {
                 const raw = (r.addressGroup || r.address_group || r['Address Group'] || r.group || r['Group'] || 'CONTRIBUTOR').toString().trim().toUpperCase();
@@ -413,7 +441,8 @@ export function ImportPage({ onNavigate, onStatsChange }) {
               })(),
               landmark: convertBaminiToUnicode((r.Landmark || r.landmark || '').trim()),
               notes: `Imported from ${selectedFile.name}`
-            })).filter(item => item.name && item.address_line_1);
+            };
+            }).filter(item => item.name && item.address_line_1);
 
 
             setPreviewItems(parsed);

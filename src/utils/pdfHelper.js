@@ -1017,24 +1017,47 @@ export function parseSingleBoxToAddress(boxContent, fileName = 'Imported PDF') {
   }
 
   // 4. Extract District
-  let detectedDistrict = 'Tenkasi';
+  let detectedDistrict = '';
   let hasExplicitDistrict = false;
-  for (const [tName, engDistrict] of Object.entries(TAMIL_DISTRICT_MAP)) {
-    if (unicodeText.includes(tName)) {
-      detectedDistrict = engDistrict;
-      hasExplicitDistrict = true;
-      break;
-    }
+
+  // Use Pincode to determine District First (Strongest signal)
+  let possibleDistricts = null;
+  if (pincode) {
+    if (pincode.startsWith('628')) detectedDistrict = 'Thoothukudi';
+    else if (pincode.startsWith('627')) possibleDistricts = ['Tenkasi', 'Tirunelveli'];
+    else if (pincode.startsWith('625')) detectedDistrict = 'Madurai';
+    else if (pincode.startsWith('641') || pincode.startsWith('642')) detectedDistrict = 'Coimbatore';
+    else if (pincode.startsWith('600')) detectedDistrict = 'Chennai';
+    else if (pincode.startsWith('622')) detectedDistrict = 'Pudukkottai';
   }
-  if (!hasExplicitDistrict) {
-    for (const d of DISTRICTS_LIST) {
-      if (new RegExp(`\\b${d}\\b`, 'i').test(unicodeText)) {
-        detectedDistrict = d;
-        hasExplicitDistrict = true;
-        break;
+
+  // Fallback to text matching if pincode didn't uniquely determine it
+  if (!detectedDistrict) {
+    for (const [tName, engDistrict] of Object.entries(TAMIL_DISTRICT_MAP)) {
+      if (unicodeText.includes(tName)) {
+        if (!possibleDistricts || possibleDistricts.includes(engDistrict)) {
+          detectedDistrict = engDistrict;
+          hasExplicitDistrict = true;
+          break;
+        }
       }
     }
+    if (!hasExplicitDistrict) {
+      for (const d of DISTRICTS_LIST) {
+        if (new RegExp(`\\b${d}\\b`, 'i').test(unicodeText)) {
+          if (!possibleDistricts || possibleDistricts.includes(d)) {
+            detectedDistrict = d;
+            hasExplicitDistrict = true;
+            break;
+          }
+        }
+      }
+    }
+    if (!detectedDistrict) {
+      detectedDistrict = possibleDistricts ? possibleDistricts[0] : 'Tenkasi'; // Final fallback
+    }
   }
+
   if (!pincode || pincode.length !== 6) {
     pincode = detectedDistrict === 'Thoothukudi' ? '628303' : 
               (detectedDistrict === 'Tenkasi' ? '627811' : 
@@ -1767,8 +1790,6 @@ function parseUnstructuredBlocks(fullText, fileName) {
 
     let phone = '';
     let pincode = '';
-    let detectedDistrict = 'Tenkasi';
-    let hasExplicitDistrict = false;
     let doorNo = '';
     let areaName = '';
     let state = 'Tamil Nadu';
@@ -1782,25 +1803,7 @@ function parseUnstructuredBlocks(fullText, fileName) {
       }
     }
 
-    // 2. Extract District
-    for (const [tName, engDistrict] of Object.entries(TAMIL_DISTRICT_MAP)) {
-      if (blockText.includes(tName)) {
-        detectedDistrict = engDistrict;
-        hasExplicitDistrict = true;
-        break;
-      }
-    }
-    if (!hasExplicitDistrict) {
-      for (const d of DISTRICTS_LIST) {
-        if (new RegExp(`\\b${d}\\b`, 'i').test(blockText)) {
-          detectedDistrict = d;
-          hasExplicitDistrict = true;
-          break;
-        }
-      }
-    }
-
-    // 3. Extract strictly 6-digit Pincode
+    // 2. Extract strictly 6-digit Pincode FIRST to help with District matching
     const pincodeMatch = blockText.match(/(?:DE|Dr|DI|Dt|TE|D|Pin|Pincode|PIN|P\.O\.|Po)?\.?\s*(?<!\d)(6\d{2})\s*(\d{3})(?!\d)|(?:DE|Dr|DI|Dt|TE|D|Pin|Pincode|PIN|P\.O\.|Po)?\.?\s*(?<!\d)(6\d{5})(?!\d)|(?:DE|Dr|DI|Dt|TE|D|Pin|Pincode|PIN|P\.O\.|Po)?\.?\s*(?<!\d)([1-9]\d{2})\s*(\d{3})(?!\d)|(?:DE|Dr|DI|Dt|TE|D|Pin|Pincode|PIN|P\.O\.|Po)?\.?\s*(?<!\d)([1-9]\d{5})(?!\d)/i);
     if (pincodeMatch) {
       let cand = '';
@@ -1814,6 +1817,48 @@ function parseUnstructuredBlocks(fullText, fileName) {
         pincode = cleanPin;
       }
     }
+
+    let detectedDistrict = '';
+    let hasExplicitDistrict = false;
+
+    // Use Pincode to determine District First
+    let possibleDistricts = null;
+    if (pincode) {
+      if (pincode.startsWith('628')) detectedDistrict = 'Thoothukudi';
+      else if (pincode.startsWith('627')) possibleDistricts = ['Tenkasi', 'Tirunelveli'];
+      else if (pincode.startsWith('625')) detectedDistrict = 'Madurai';
+      else if (pincode.startsWith('641') || pincode.startsWith('642')) detectedDistrict = 'Coimbatore';
+      else if (pincode.startsWith('600')) detectedDistrict = 'Chennai';
+      else if (pincode.startsWith('622')) detectedDistrict = 'Pudukkottai';
+    }
+
+    // Fallback to text matching
+    if (!detectedDistrict) {
+      for (const [tName, engDistrict] of Object.entries(TAMIL_DISTRICT_MAP)) {
+        if (blockText.includes(tName)) {
+          if (!possibleDistricts || possibleDistricts.includes(engDistrict)) {
+            detectedDistrict = engDistrict;
+            hasExplicitDistrict = true;
+            break;
+          }
+        }
+      }
+      if (!hasExplicitDistrict) {
+        for (const d of DISTRICTS_LIST) {
+          if (new RegExp(`\\b${d}\\b`, 'i').test(blockText)) {
+            if (!possibleDistricts || possibleDistricts.includes(d)) {
+              detectedDistrict = d;
+              hasExplicitDistrict = true;
+              break;
+            }
+          }
+        }
+      }
+      if (!detectedDistrict) {
+        detectedDistrict = possibleDistricts ? possibleDistricts[0] : 'Tenkasi'; // Final fallback
+      }
+    }
+
     if (!pincode || pincode.length !== 6) {
       pincode = detectedDistrict === 'Thoothukudi' ? '628303' : 
                 (detectedDistrict === 'Tenkasi' ? '627811' : 
