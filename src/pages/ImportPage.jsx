@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Papa from 'papaparse';
 import { batchImportAddresses, updateAddress, checkDuplicateAddress, batchCheckDuplicateAddresses } from '../services/apiService';
 import { parsePdfOrDocumentAddresses, convertBaminiToUnicode, stripDistrictFromAddressLine } from '../utils/pdfHelper';
+import { getAreaDetails } from '../utils/areaHelper';
 import { Upload, FileSpreadsheet, FileText, CheckCircle2, AlertCircle, Eye, Trash2, Edit3, ArrowRight, Copy, Check } from 'lucide-react';
 import { Toast } from '../components/Toast';
 import { PageLoader } from '../components/PageLoader';
@@ -33,18 +34,14 @@ function getTamilDistrict(distStr) {
 }
 
 // Helper to validate that Pincode is strictly 6 digits
-function sanitizePincode(rawPin, district = 'Tenkasi') {
-  const defaultPin = district === 'Thoothukudi' ? '628303' :
-    (district === 'Madurai' ? '625014' :
-      (district === 'Coimbatore' ? '641001' :
-        (district === 'Chennai' ? '600001' : '627811')));
-  if (!rawPin) return defaultPin;
+function sanitizePincode(rawPin) {
+  if (!rawPin) return '';
   const clean = String(rawPin).replace(/\D/g, '');
   if (clean.length === 6) {
     if (clean.startsWith('6')) return clean;
     if (!clean.startsWith('10') && !clean.startsWith('11')) return clean;
   }
-  return defaultPin;
+  return '';
 }
 
 // Helper to clearly determine and explain why a record was flagged as duplicate
@@ -387,29 +384,42 @@ export function ImportPage({ onNavigate, onStatsChange }) {
             const parsed = rows.map(r => {
               let rawPin = r.Pincode || r.pincode;
               let rawDistrict = r.District || r.district || '';
+              let rawArea = r.Area || r.City || r.area || '';
               
-              let parsedPincode = sanitizePincode(rawPin, rawDistrict);
+              let parsedPincode = sanitizePincode(rawPin);
               let finalDistrict = getTamilDistrict(convertBaminiToUnicode(rawDistrict.trim()));
+              let finalArea = convertBaminiToUnicode(rawArea.trim());
 
               if (!finalDistrict || finalDistrict === '') {
-                if (parsedPincode) {
-                  if (parsedPincode.startsWith('628')) finalDistrict = 'Thoothukudi';
-                  else if (parsedPincode.startsWith('627')) finalDistrict = 'Tenkasi';
-                  else if (parsedPincode.startsWith('625')) finalDistrict = 'Madurai';
-                  else if (parsedPincode.startsWith('641') || parsedPincode.startsWith('642')) finalDistrict = 'Coimbatore';
-                  else if (parsedPincode.startsWith('600')) finalDistrict = 'Chennai';
-                  else if (parsedPincode.startsWith('622')) finalDistrict = 'Pudukkottai';
-                  else finalDistrict = 'Tenkasi';
-                } else {
-                  finalDistrict = 'Tenkasi';
-                }
+                 if (finalArea) {
+                    const areaDet = getAreaDetails(finalArea);
+                    if (areaDet) {
+                       finalDistrict = areaDet.district;
+                       if (!parsedPincode) parsedPincode = areaDet.pincode;
+                    }
+                 }
+
+                 if (!finalDistrict || finalDistrict === '') {
+                   if (parsedPincode) {
+                     if (parsedPincode.startsWith('628')) finalDistrict = 'Thoothukudi';
+                     else if (parsedPincode.startsWith('627')) finalDistrict = 'Tenkasi';
+                     else if (parsedPincode.startsWith('625')) finalDistrict = 'Madurai';
+                     else if (parsedPincode.startsWith('641') || parsedPincode.startsWith('642')) finalDistrict = 'Coimbatore';
+                     else if (parsedPincode.startsWith('600')) finalDistrict = 'Chennai';
+                     else if (parsedPincode.startsWith('622')) finalDistrict = 'Pudukkottai';
+                     else finalDistrict = '';
+                   } else {
+                     finalDistrict = '';
+                   }
+                 }
               }
 
-              // For safety, let's just use finalDistrict if rawDistrict was empty.
-              if (!rawDistrict) {
-                 if (parsedPincode.startsWith('628')) finalDistrict = 'Thoothukudi';
-                 else if (parsedPincode.startsWith('627')) finalDistrict = 'Tenkasi'; // Default to Tenkasi if empty, user must explicitly say Tirunelveli
-                 else if (parsedPincode.startsWith('622')) finalDistrict = 'Pudukkottai';
+              if (!rawDistrict && !finalDistrict) {
+                 if (parsedPincode) {
+                   if (parsedPincode.startsWith('628')) finalDistrict = 'Thoothukudi';
+                   else if (parsedPincode.startsWith('627')) finalDistrict = 'Tenkasi';
+                   else if (parsedPincode.startsWith('622')) finalDistrict = 'Pudukkottai';
+                 }
               }
 
               return {
@@ -428,7 +438,7 @@ export function ImportPage({ onNavigate, onStatsChange }) {
                 ? stripDistrictFromAddressLine(convertBaminiToUnicode((r['Address Line 1'] || r.Address || r.address_line_1).trim()), finalDistrict)
                 : 'Address Line',
               address_line_2: convertBaminiToUnicode((r['Address Line 2'] || r.address_line_2 || '').trim()),
-              area: convertBaminiToUnicode((r.Area || r.City || r.area || finalDistrict).trim()),
+              area: finalArea || convertBaminiToUnicode((finalDistrict).trim()),
               city: convertBaminiToUnicode((r.City || r.city || finalDistrict).trim()),
               district: finalDistrict,
               state: convertBaminiToUnicode((r.State || r.state || 'Tamil Nadu').trim()),

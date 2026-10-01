@@ -2,6 +2,7 @@ import JSZip from 'jszip';
 import Tesseract from 'tesseract.js';
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.js?url';
+import { getAreaDetails } from './areaHelper';
 
 if (typeof window !== 'undefined' && pdfjsLib && pdfjsLib.GlobalWorkerOptions) {
   try {
@@ -1016,7 +1017,21 @@ export function parseSingleBoxToAddress(boxContent, fileName = 'Imported PDF') {
     }
   }
 
-  // 4. Extract District
+  // 4a. Extract Post Office / Area / Village Name
+  let areaName = '';
+  const poMatch = unicodeText.match(/([\u0B80-\u0BFF\w\s]+?)\s*(?:Po|P\.O\.|போஸ்ட்|Tk|Taluk|தாலுகா)\b/i);
+  if (poMatch) {
+    let poCand = poMatch[1].replace(/^(S\/o|W\/o|D\/o|C\/o|&)\s*/i, '').trim();
+    const poWords = poCand.split(/[\s,]+/).filter(Boolean);
+    if (poWords.length > 0) {
+      const lastWord = poWords[poWords.length - 1];
+      if (lastWord.length >= 3 && !/^(Po|Tk|Dt|Dr|DE|DI|Cell|Tel|Ph|Mob)$/i.test(lastWord)) {
+        areaName = lastWord;
+      }
+    }
+  }
+
+  // 4b. Extract District
   let detectedDistrict = '';
   let hasExplicitDistrict = false;
 
@@ -1054,7 +1069,18 @@ export function parseSingleBoxToAddress(boxContent, fileName = 'Imported PDF') {
       }
     }
     if (!detectedDistrict) {
-      detectedDistrict = possibleDistricts ? possibleDistricts[0] : 'Tenkasi'; // Final fallback
+      // Use area details if available
+      if (areaName) {
+        const areaDet = getAreaDetails(areaName);
+        if (areaDet) {
+          detectedDistrict = areaDet.district;
+          if (!pincode) pincode = areaDet.pincode;
+        }
+      }
+      
+      if (!detectedDistrict) {
+        detectedDistrict = possibleDistricts ? possibleDistricts[0] : ''; // Removed Tenkasi fallback
+      }
     }
   }
 
@@ -1063,21 +1089,7 @@ export function parseSingleBoxToAddress(boxContent, fileName = 'Imported PDF') {
               (detectedDistrict === 'Tenkasi' ? '627811' : 
               (detectedDistrict === 'Coimbatore' ? '641001' : 
               (detectedDistrict === 'Madurai' ? '625014' : 
-              (detectedDistrict === 'Chennai' ? '600001' : '627811'))));
-  }
-
-  // 5. Extract Post Office / Area / Village Name
-  let areaName = '';
-  const poMatch = unicodeText.match(/([\u0B80-\u0BFF\w\s]+?)\s*(?:Po|P\.O\.|போஸ்ட்|Tk|Taluk|தாலுகா)\b/i);
-  if (poMatch) {
-    let poCand = poMatch[1].replace(/^(S\/o|W\/o|D\/o|C\/o|&)\s*/i, '').trim();
-    const poWords = poCand.split(/[\s,]+/).filter(Boolean);
-    if (poWords.length > 0) {
-      const lastWord = poWords[poWords.length - 1];
-      if (lastWord.length >= 3 && !/^(Po|Tk|Dt|Dr|DE|DI|Cell|Tel|Ph|Mob)$/i.test(lastWord)) {
-        areaName = lastWord;
-      }
-    }
+              (detectedDistrict === 'Chennai' ? '600001' : ''))));
   }
 
   // 6. Extract Door No
@@ -1156,7 +1168,7 @@ export function parseSingleBoxToAddress(boxContent, fileName = 'Imported PDF') {
     fullAddress = `${name}'s Address`;
   }
 
-  const finalArea = areaName || (detectedDistrict || 'Tenkasi');
+  const finalArea = areaName || detectedDistrict || '';
 
   return {
     u_id: uId,
@@ -1818,6 +1830,19 @@ function parseUnstructuredBlocks(fullText, fileName) {
       }
     }
 
+    // Extract Post Office / Taluk / Village Area early
+    const poMatch = blockText.match(/([\u0B80-\u0BFF\w\s]+?)\s*(?:Po|P\.O\.|போஸ்ட்|Tk|Taluk|தாலுகா)\b/i);
+    if (poMatch) {
+      let poCand = poMatch[1].replace(/^(S\/o|W\/o|D\/o|C\/o|&)\s*/i, '').trim();
+      const poWords = poCand.split(/[\s,]+/).filter(Boolean);
+      if (poWords.length > 0) {
+        const lastWord = poWords[poWords.length - 1];
+        if (lastWord.length >= 3 && !/^(Po|Tk|Dt|Dr|DE|DI|TE|D|Cell|Tel|Ph|Mob)$/i.test(lastWord)) {
+          areaName = lastWord;
+        }
+      }
+    }
+
     let detectedDistrict = '';
     let hasExplicitDistrict = false;
 
@@ -1855,7 +1880,18 @@ function parseUnstructuredBlocks(fullText, fileName) {
         }
       }
       if (!detectedDistrict) {
-        detectedDistrict = possibleDistricts ? possibleDistricts[0] : 'Tenkasi'; // Final fallback
+        // Use area details if available
+        if (areaName) {
+          const areaDet = getAreaDetails(areaName);
+          if (areaDet) {
+            detectedDistrict = areaDet.district;
+            if (!pincode) pincode = areaDet.pincode;
+          }
+        }
+
+        if (!detectedDistrict) {
+          detectedDistrict = possibleDistricts ? possibleDistricts[0] : ''; // Removed Tenkasi fallback
+        }
       }
     }
 
@@ -1864,20 +1900,7 @@ function parseUnstructuredBlocks(fullText, fileName) {
                 (detectedDistrict === 'Tenkasi' ? '627811' : 
                 (detectedDistrict === 'Coimbatore' ? '641001' : 
                 (detectedDistrict === 'Madurai' ? '625014' : 
-                (detectedDistrict === 'Chennai' ? '600001' : '627811'))));
-    }
-
-    // 4. Extract Post Office / Taluk / Village Area
-    const poMatch = blockText.match(/([\u0B80-\u0BFF\w\s]+?)\s*(?:Po|P\.O\.|போஸ்ட்|Tk|Taluk|தாலுகா)\b/i);
-    if (poMatch) {
-      let poCand = poMatch[1].replace(/^(S\/o|W\/o|D\/o|C\/o|&)\s*/i, '').trim();
-      const poWords = poCand.split(/[\s,]+/).filter(Boolean);
-      if (poWords.length > 0) {
-        const lastWord = poWords[poWords.length - 1];
-        if (lastWord.length >= 3 && !/^(Po|Tk|Dt|Dr|DE|DI|TE|D|Cell|Tel|Ph|Mob)$/i.test(lastWord)) {
-          areaName = lastWord;
-        }
-      }
+                (detectedDistrict === 'Chennai' ? '600001' : ''))));
     }
     if (!areaName) {
       if (blockText.includes('ஓட்டப்பிடாரம்') || blockText.includes('ஒட்டப்பிடாரம்')) areaName = 'ஓட்டப்பிடாரம்';
@@ -1941,7 +1964,7 @@ function parseUnstructuredBlocks(fullText, fileName) {
       fullAddressLine = stripDistrictFromAddressLine(fullAddressLine, detectedDistrict);
     }
 
-    const finalArea = areaName ? convertBaminiToUnicode(areaName) : (detectedDistrict || 'Tenkasi');
+    const finalArea = areaName ? convertBaminiToUnicode(areaName) : (detectedDistrict || '');
 
     // ONLY push if name is valid (at least 2 chars, not pure digits, not metadata or document headers)
     if (name && name.length >= 2 && !/^\d+$/.test(name) && !isPdfMetadata(name) && !/^(?:Sanju|Page\s*\d+|Ten\s*-\s*Po)/i.test(name)) {
