@@ -25,7 +25,8 @@ function getTamilDistrict(distStr) {
   const cleanStr = distStr.trim();
   const distMatch = RAW_DISTRICTS_DATA.find(d => 
     d.id.toLowerCase() === cleanStr.toLowerCase() || 
-    d.en.toLowerCase() === cleanStr.toLowerCase()
+    d.en.toLowerCase() === cleanStr.toLowerCase() ||
+    d.ta === cleanStr
   );
   if (distMatch && distMatch.ta) {
     return distMatch.ta;
@@ -394,20 +395,21 @@ export function ImportPage({ onNavigate, onStatsChange }) {
                  if (finalArea) {
                     const areaDet = getAreaDetails(finalArea);
                     if (areaDet) {
-                       finalDistrict = areaDet.district;
+                       finalDistrict = getTamilDistrict(areaDet.district);
                        if (!parsedPincode) parsedPincode = areaDet.pincode;
                     }
                  }
 
                  if (!finalDistrict || finalDistrict === '') {
                    if (parsedPincode) {
-                     if (parsedPincode.startsWith('628')) finalDistrict = 'Thoothukudi';
-                     else if (parsedPincode.startsWith('627')) finalDistrict = 'Tenkasi';
-                     else if (parsedPincode.startsWith('625')) finalDistrict = 'Madurai';
-                     else if (parsedPincode.startsWith('641') || parsedPincode.startsWith('642')) finalDistrict = 'Coimbatore';
-                     else if (parsedPincode.startsWith('600')) finalDistrict = 'Chennai';
-                     else if (parsedPincode.startsWith('622')) finalDistrict = 'Pudukkottai';
-                     else finalDistrict = '';
+                     let tempDist = '';
+                     if (parsedPincode.startsWith('628')) tempDist = 'Thoothukudi';
+                     else if (parsedPincode.startsWith('627')) tempDist = 'Tenkasi';
+                     else if (parsedPincode.startsWith('625')) tempDist = 'Madurai';
+                     else if (parsedPincode.startsWith('641') || parsedPincode.startsWith('642')) tempDist = 'Coimbatore';
+                     else if (parsedPincode.startsWith('600')) tempDist = 'Chennai';
+                     else if (parsedPincode.startsWith('622')) tempDist = 'Pudukkottai';
+                     finalDistrict = tempDist ? getTamilDistrict(tempDist) : '';
                    } else {
                      finalDistrict = '';
                    }
@@ -416,9 +418,11 @@ export function ImportPage({ onNavigate, onStatsChange }) {
 
               if (!rawDistrict && !finalDistrict) {
                  if (parsedPincode) {
-                   if (parsedPincode.startsWith('628')) finalDistrict = 'Thoothukudi';
-                   else if (parsedPincode.startsWith('627')) finalDistrict = 'Tenkasi';
-                   else if (parsedPincode.startsWith('622')) finalDistrict = 'Pudukkottai';
+                   let tempDist = '';
+                   if (parsedPincode.startsWith('628')) tempDist = 'Thoothukudi';
+                   else if (parsedPincode.startsWith('627')) tempDist = 'Tenkasi';
+                   else if (parsedPincode.startsWith('622')) tempDist = 'Pudukkottai';
+                   finalDistrict = tempDist ? getTamilDistrict(tempDist) : '';
                  }
               }
 

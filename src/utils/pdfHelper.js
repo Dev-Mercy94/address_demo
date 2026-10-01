@@ -1003,7 +1003,7 @@ export function parseSingleBoxToAddress(boxContent, fileName = 'Imported PDF') {
 
   // 3. Extract strictly 6-digit Pincode (e.g. 627811, 627805, 628303, 625014, 641001)
   let pincode = '';
-  const pincodeMatch = unicodeText.match(/(?:DE|Dr|DI|Dt|Pin|Pincode|PIN)?\s*(?<!\d)(6\d{2})\s*(\d{3})(?!\d)|(?:DE|Dr|DI|Dt|Pin|Pincode|PIN)?\s*(?<!\d)(6\d{5})(?!\d)|(?:DE|Dr|DI|Dt|Pin|Pincode|PIN)?\s*(?<!\d)([1-9]\d{2})\s*(\d{3})(?!\d)|(?:DE|Dr|DI|Dt|Pin|Pincode|PIN)?\s*(?<!\d)([1-9]\d{5})(?!\d)/i);
+  const pincodeMatch = unicodeText.match(/(?:DE|Dr|DI|Dt|Pin|Pincode|PIN)?[\s\:\.\-]*(?<!\d)(6\d{2})[\s\.\-]*(\d{3})(?!\d)|(?:DE|Dr|DI|Dt|Pin|Pincode|PIN)?[\s\:\.\-]*(?<!\d)(6\d{5})(?!\d)|(?:DE|Dr|DI|Dt|Pin|Pincode|PIN)?[\s\:\.\-]*(?<!\d)([1-9]\d{2})[\s\.\-]*(\d{3})(?!\d)|(?:DE|Dr|DI|Dt|Pin|Pincode|PIN)?[\s\:\.\-]*(?<!\d)([1-9]\d{5})(?!\d)/i);
   if (pincodeMatch) {
     let cand = '';
     if (pincodeMatch[1] && pincodeMatch[2]) cand = pincodeMatch[1] + pincodeMatch[2];
@@ -1153,8 +1153,8 @@ export function parseSingleBoxToAddress(boxContent, fileName = 'Imported PDF') {
   let fullAddress = addressLines.join(', ')
     .replace(/(?:Cell|Mobile|Ph|Mob|Tel)?\s*[\:\.\-]?\s*(?<!\d)[6-9]\d{4}\s*\d{5}(?!\d)/gi, '')
     .replace(/(?:Cell|Mobile|Ph|Mob|Tel)?\s*[\:\.\-]?\s*(?<!\d)[6-9]\d{9}(?!\d)/gi, '')
-    .replace(/(?:DE|Dr|DI|Dt|Pin|Pincode|PIN)?\s*(?<!\d)[1-9]\d{2}\s*\d{3}(?!\d)/gi, '')
-    .replace(/(?:DE|Dr|DI|Dt|Pin|Pincode|PIN)?\s*(?<!\d)[1-9]\d{5}(?!\d)/gi, '')
+    .replace(/(?:DE|Dr|DI|Dt|Pin|Pincode|PIN)?[\s\:\.\-]*(?<!\d)[1-9]\d{2}[\s\.\-]*\d{3}(?!\d)/gi, '')
+    .replace(/(?:DE|Dr|DI|Dt|Pin|Pincode|PIN)?[\s\:\.\-]*(?<!\d)[1-9]\d{5}(?!\d)/gi, '')
     .replace(/Cell\s*[\:\.]?/gi, '')
     .replace(/\s+,\s+/g, ', ')
     .replace(/,+/g, ',')
@@ -1541,7 +1541,7 @@ function segmentIntoAddressBlocks(fullText) {
 
   const text = deMashHorizontalGridText(fullText);
 
-  const pincodePattern = /(?:(?:DE|Dr|DI|Dt|TE|D|Pin|Pincode|PIN|P\.O\.|Po)\.?\s*)?(?<!\d)([1-9]\d{2})\s*(\d{3})(?!\d)|(?:(?:DE|Dr|DI|Dt|TE|D|Pin|Pincode|PIN|P\.O\.|Po)\.?\s*)?(?<!\d)([1-9]\d{5})(?!\d)/gi;
+  const pincodePattern = /(?:(?:DE|Dr|DI|Dt|TE|D|Pin|Pincode|PIN|P\.O\.|Po)\.?[\s\:\.\-]*)?(?<!\d)([1-9]\d{2})[\s\.\-]*(\d{3})(?!\d)|(?:(?:DE|Dr|DI|Dt|TE|D|Pin|Pincode|PIN|P\.O\.|Po)\.?[\s\:\.\-]*)?(?<!\d)([1-9]\d{5})(?!\d)/gi;
   const phonePattern = /(?:Cell|Mobile|Ph|Mob|Tel|DI|DE|Dr|Dt)?\s*[\:\.\-]?\s*(?<!\d)([6-9]\d{4}\s*\d{5}|[6-9]\d{9})(?!\d)/gi;
   const uidGlobalRegex = /(?:^|[\s\n\r\t,;\(\)\{\}\[\]•·])(?<![A-Za-z0-9])([A-Za-z]|ஆ)\s*[-\–—_~]\s*0*(\d{1,6})\b/gi;
 
@@ -1816,7 +1816,7 @@ function parseUnstructuredBlocks(fullText, fileName) {
     }
 
     // 2. Extract strictly 6-digit Pincode FIRST to help with District matching
-    const pincodeMatch = blockText.match(/(?:DE|Dr|DI|Dt|TE|D|Pin|Pincode|PIN|P\.O\.|Po)?\.?\s*(?<!\d)(6\d{2})\s*(\d{3})(?!\d)|(?:DE|Dr|DI|Dt|TE|D|Pin|Pincode|PIN|P\.O\.|Po)?\.?\s*(?<!\d)(6\d{5})(?!\d)|(?:DE|Dr|DI|Dt|TE|D|Pin|Pincode|PIN|P\.O\.|Po)?\.?\s*(?<!\d)([1-9]\d{2})\s*(\d{3})(?!\d)|(?:DE|Dr|DI|Dt|TE|D|Pin|Pincode|PIN|P\.O\.|Po)?\.?\s*(?<!\d)([1-9]\d{5})(?!\d)/i);
+    const pincodeMatch = blockText.match(/(?:DE|Dr|DI|Dt|TE|D|Pin|Pincode|PIN|P\.O\.|Po)?[\s\:\.\-]*(?<!\d)(6\d{2})[\s\.\-]*(\d{3})(?!\d)|(?:DE|Dr|DI|Dt|TE|D|Pin|Pincode|PIN|P\.O\.|Po)?[\s\:\.\-]*(?<!\d)(6\d{5})(?!\d)|(?:DE|Dr|DI|Dt|TE|D|Pin|Pincode|PIN|P\.O\.|Po)?[\s\:\.\-]*(?<!\d)([1-9]\d{2})[\s\.\-]*(\d{3})(?!\d)|(?:DE|Dr|DI|Dt|TE|D|Pin|Pincode|PIN|P\.O\.|Po)?[\s\:\.\-]*(?<!\d)([1-9]\d{5})(?!\d)/i);
     if (pincodeMatch) {
       let cand = '';
       if (pincodeMatch[1] && pincodeMatch[2]) cand = pincodeMatch[1] + pincodeMatch[2];
@@ -1918,8 +1918,8 @@ function parseUnstructuredBlocks(fullText, fileName) {
       .replace(/(?:^|\b)(?:[A-Za-z]|ஆ)[-\s\.\:—_–~]?\s*0*\d{1,6}\b/gi, '')
       .replace(/(?:Cell|Phone|Mobile|Ph|Mob|Tel|DI|DE|Dr|Dt|TE|D)?\s*[\:\.\-]?\s*(?<!\d)(?:0\d{2,4}\s*[\-\s]?\s*\d{5,8}|[6-9]\d{4}\s*\d{5}|[6-9]\d{9})(?!\d)/gi, '')
       .replace(/\b0\d{2,4}\s*[-\:]\s*/g, '')
-      .replace(/(?:DE|Dr|DI|Dt|TE|D|Pin|Pincode|PIN|Po|P\.O\.)?\.?\s*(?<!\d)[1-9]\d{2}\s*\d{3}(?!\d)/gi, '')
-      .replace(/(?:DE|Dr|DI|Dt|TE|D|Pin|Pincode|PIN|Po|P\.O\.)?\.?\s*(?<!\d)[1-9]\d{4,5}(?!\d)/gi, '')
+      .replace(/(?:DE|Dr|DI|Dt|TE|D|Pin|Pincode|PIN|Po|P\.O\.)?[\s\:\.\-]*(?<!\d)[1-9]\d{2}[\s\.\-]*\d{3}(?!\d)/gi, '')
+      .replace(/(?:DE|Dr|DI|Dt|TE|D|Pin|Pincode|PIN|Po|P\.O\.)?[\s\:\.\-]*(?<!\d)[1-9]\d{4,5}(?!\d)/gi, '')
       .replace(/Tamil\s*Nadu(\s*[\-\:]\s*\d{6})?/gi, '')
       .replace(/Cell\s*[\:\.]?/gi, '')
       .replace(/\b(?:Dt|Dr|DE|DI|TE|D|Po)\b\.?/gi, '')
