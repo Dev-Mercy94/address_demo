@@ -506,7 +506,6 @@ export function ImportPage({ onNavigate, onStatsChange }) {
       }
     } catch (err) {
       console.error('Text parsing error:', err);
-      setToast({ message: 'Failed to parse address text.', type: 'error' });
     } finally {
       setIsParsing(false);
     }
@@ -1127,9 +1126,11 @@ export function ImportPage({ onNavigate, onStatsChange }) {
               <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                 Supports multi-line blocks separated by blank lines or numbered indexes (1. Name, 2. Name...)
               </span>
-              <button onClick={handleRawTextParse} className="btn btn-primary btn-sm" disabled={isParsing}>
-                <FileText size={15} /> Parse & Preview Addresses
-              </button>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <button onClick={handleRawTextParse} className="btn btn-primary btn-sm" disabled={isParsing}>
+                  <FileText size={15} /> Parse & Preview Addresses
+                </button>
+              </div>
             </div>
           </div>
         )}

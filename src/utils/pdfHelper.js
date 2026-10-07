@@ -1149,23 +1149,36 @@ export function parseSingleBoxToAddress(boxContent, fileName = 'Imported PDF') {
     name = contentLines[0] || 'Contact Name';
   }
 
-  // Assemble full address line
-  let fullAddress = addressLines.join(', ')
-    .replace(/(?:Cell|Mobile|Ph|Mob|Tel)?\s*[\:\.\-]?\s*(?<!\d)[6-9]\d{4}\s*\d{5}(?!\d)/gi, '')
-    .replace(/(?:Cell|Mobile|Ph|Mob|Tel)?\s*[\:\.\-]?\s*(?<!\d)[6-9]\d{9}(?!\d)/gi, '')
-    .replace(/(?:DE|Dr|DI|Dt|Pin|Pincode|PIN)?[\s\:\.\-]*(?<!\d)[1-9]\d{2}[\s\.\-]*\d{3}(?!\d)/gi, '')
-    .replace(/(?:DE|Dr|DI|Dt|Pin|Pincode|PIN)?[\s\:\.\-]*(?<!\d)[1-9]\d{5}(?!\d)/gi, '')
-    .replace(/Cell\s*[\:\.]?/gi, '')
-    .replace(/\s+,\s+/g, ', ')
-    .replace(/,+/g, ',')
-    .replace(/^[,;\s]+|[,;\s]+$/g, '')
-    .trim();
+  // Do not include the relationship string in the main address line if we can avoid it
+  const cleanAddressLines = addressLines.filter(line => !/^(S\/o|W\/o|D\/o|C\/o)/i.test(line));
 
-  // Clean district name out of address line so it is not duplicated
-  fullAddress = stripDistrictFromAddressLine(fullAddress, detectedDistrict);
+  let addr1 = '';
+  let addr2 = '';
 
-  if (!fullAddress) {
-    fullAddress = `${name}'s Address`;
+  if (cleanAddressLines.length > 0) {
+    addr1 = cleanAddressLines[0];
+    if (cleanAddressLines.length > 1) {
+      addr2 = cleanAddressLines.slice(1).join(', ')
+        .replace(/(?:Cell|Mobile|Ph|Mob|Tel)?\s*[\:\.\-]?\s*(?<!\d)[6-9]\d{4}\s*\d{5}(?!\d)/gi, '')
+        .replace(/(?:Cell|Mobile|Ph|Mob|Tel)?\s*[\:\.\-]?\s*(?<!\d)[6-9]\d{9}(?!\d)/gi, '')
+        .replace(/(?:DE|Dr|DI|Dt|Pin|Pincode|PIN)?[\s\:\.\-]*(?<!\d)[1-9]\d{2}[\s\.\-]*\d{3}(?!\d)/gi, '')
+        .replace(/(?:DE|Dr|DI|Dt|Pin|Pincode|PIN)?[\s\:\.\-]*(?<!\d)[1-9]\d{5}(?!\d)/gi, '')
+        .replace(/Cell\s*[\:\.]?/gi, '')
+        .replace(/\s+,\s+/g, ', ')
+        .replace(/,+/g, ',')
+        .replace(/^[,;\s]+|[,;\s]+$/g, '')
+        .trim();
+    }
+  }
+
+  // Clean district name out of address lines
+  addr1 = stripDistrictFromAddressLine(addr1, detectedDistrict);
+  if (addr2) {
+    addr2 = stripDistrictFromAddressLine(addr2, detectedDistrict);
+  }
+
+  if (!addr1 && !addr2) {
+    addr1 = `${name}'s Address`;
   }
 
   const finalArea = areaName || detectedDistrict || '';
@@ -1182,8 +1195,8 @@ export function parseSingleBoxToAddress(boxContent, fileName = 'Imported PDF') {
       .trim()
       .substring(0, 70),
     door_no: doorNo,
-    address_line_1: fullAddress.substring(0, 160),
-    address_line_2: '',
+    address_line_1: addr1.substring(0, 160),
+    address_line_2: addr2.substring(0, 160),
     area: finalArea.substring(0, 50),
     city: finalArea.substring(0, 50),
     district: detectedDistrict,
