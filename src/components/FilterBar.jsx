@@ -21,7 +21,7 @@ export function FilterBar({
     <div className="address-filter-bar">
       {/* Address Group / Category Dropdown */}
       <div className="address-filter-item" style={{ minWidth: '160px' }}>
-        <Tag size={16} style={{ color: '#2563eb', flexShrink: 0 }} />
+        <Tag size={16} style={{ color: '#ea580c', flexShrink: 0 }} />
         <select
           value={group || 'ALL'}
           onChange={(e) => onGroupChange && onGroupChange(e.target.value)}
@@ -63,7 +63,7 @@ export function FilterBar({
 
       {/* Street Name Filter */}
       <div className="address-filter-item">
-        <MapPin size={16} style={{ color: '#2563eb', flexShrink: 0 }} />
+        <MapPin size={16} style={{ color: '#ea580c', flexShrink: 0 }} />
         <div style={{ position: 'relative', width: '100%' }}>
           <input
             type="text"
@@ -109,7 +109,7 @@ export function FilterBar({
 
       {/* Pincode Filter */}
       <div className="address-filter-item" style={{ flex: '0 1 130px' }}>
-        <Hash size={16} style={{ color: '#2563eb', flexShrink: 0 }} />
+        <Hash size={16} style={{ color: '#ea580c', flexShrink: 0 }} />
         <div style={{ position: 'relative', width: '100%' }}>
           <input
             type="text"
@@ -155,7 +155,7 @@ export function FilterBar({
 
       {/* Sort Selector with Group and Alphabetical options */}
       <div className="address-filter-item" style={{ minWidth: '190px' }}>
-        <ArrowUpDown size={16} style={{ color: '#2563eb', flexShrink: 0 }} />
+        <ArrowUpDown size={16} style={{ color: '#ea580c', flexShrink: 0 }} />
         <select
           value={sort || 'name_asc'}
           onChange={(e) => onSortChange(e.target.value)}

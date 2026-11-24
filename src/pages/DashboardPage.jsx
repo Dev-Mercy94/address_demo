@@ -34,8 +34,8 @@ export function DashboardPage({ onNavigate, onSearchSelect }) {
     <div>
       {/* Top Welcome Banner */}
       <div className="card dashboard-welcome-card" style={{
-        background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(139, 92, 246, 0.1) 100%)',
-        borderColor: 'rgba(99, 102, 241, 0.3)',
+        background: 'linear-gradient(135deg, rgba(234, 88, 12, 0.18) 0%, rgba(249, 115, 22, 0.08) 100%)',
+        borderColor: 'rgba(234, 88, 12, 0.3)',
         marginBottom: '1.75rem',
         padding: '2rem'
       }}>
@@ -57,7 +57,7 @@ export function DashboardPage({ onNavigate, onSearchSelect }) {
               <CalendarHeart size={17} style={{ color: '#ec4899' }} /> Important Dates
             </button>
             <button onClick={() => onNavigate('subscription')} className="btn btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
-              <CheckSquare size={17} style={{ color: '#2563eb' }} /> Subscriptions
+              <CheckSquare size={17} style={{ color: '#ea580c' }} /> Subscriptions
             </button>
             <button onClick={() => onNavigate('import')} className="btn btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
               <Upload size={17} /> Import CSV

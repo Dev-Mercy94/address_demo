@@ -195,7 +195,7 @@ export function SubscriptionPage({ onNavigate, onEditAddress, onStatsChange }) {
       }}>
         <div>
           <h1 style={{ fontSize: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.6rem', color: 'var(--text-primary)' }}>
-            <CheckSquare size={26} style={{ color: '#2563eb' }} />
+            <CheckSquare size={26} style={{ color: '#ea580c' }} />
             <span>Subscription Management</span>
           </h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginTop: '0.2rem' }}>
@@ -208,7 +208,7 @@ export function SubscriptionPage({ onNavigate, onEditAddress, onStatsChange }) {
           onClick={() => onNavigate('add')}
           className="btn btn-primary"
           style={{
-            backgroundColor: '#2563eb',
+            backgroundColor: '#ea580c',
             backgroundImage: 'linear-gradient(135deg, #2563eb 0%, #0284c7 100%)',
             color: '#ffffff',
             fontWeight: 700,
@@ -231,7 +231,7 @@ export function SubscriptionPage({ onNavigate, onEditAddress, onStatsChange }) {
               fontSize: '0.85rem',
               fontWeight: 700,
               color: activeTab === 'ALL' ? '#ffffff' : 'var(--text-primary)',
-              backgroundColor: activeTab === 'ALL' ? '#2563eb' : 'transparent',
+              backgroundColor: activeTab === 'ALL' ? '#ea580c' : 'transparent',
               border: 'none',
               borderRadius: '0.45rem',
               cursor: 'pointer',
@@ -1051,7 +1051,7 @@ export function SubscriptionPage({ onNavigate, onEditAddress, onStatsChange }) {
                     }));
                   }}
                   className="btn btn-primary"
-                  style={{ backgroundColor: '#2563eb', fontWeight: 700 }}
+                  style={{ backgroundColor: '#ea580c', fontWeight: 700 }}
                 >
                   <CheckSquare size={16} />
                   <span>Mark as Subscribed (₹500)</span>

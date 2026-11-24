@@ -269,7 +269,7 @@ export function AddAddressPage({ initialData = null, onNavigate, onComplete, onS
           padding: '1.15rem'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
-            <User size={18} style={{ color: '#38bdf8' }} />
+            <User size={18} style={{ color: '#ea580c' }} />
             <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
               1. Contact & Identity Information
             </h3>
@@ -288,7 +288,7 @@ export function AddAddressPage({ initialData = null, onNavigate, onComplete, onS
                 onChange={handleChange}
                 placeholder="e.g. T-0021"
                 className="form-input"
-                style={{ fontWeight: 700, color: '#38bdf8', fontFamily: 'var(--font-mono)' }}
+                style={{ fontWeight: 700, color: '#ea580c', fontFamily: 'var(--font-mono)' }}
               />
             </div>
 
@@ -384,7 +384,7 @@ export function AddAddressPage({ initialData = null, onNavigate, onComplete, onS
           padding: '1.15rem'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
-            <MapPin size={18} style={{ color: '#06b6d4' }} />
+            <MapPin size={18} style={{ color: '#f97316' }} />
             <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
               2. Postal Address & Location
             </h3>

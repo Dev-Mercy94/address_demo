@@ -95,7 +95,7 @@ export function LoginPage() {
         width: '450px',
         height: '450px',
         borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(37, 99, 235, 0.25) 0%, rgba(37, 99, 235, 0) 70%)',
+        background: 'radial-gradient(circle, rgba(234, 88, 12, 0.25) 0%, rgba(234, 88, 12, 0) 70%)',
         pointerEvents: 'none'
       }} />
       <div style={{
@@ -105,7 +105,7 @@ export function LoginPage() {
         width: '450px',
         height: '450px',
         borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(99, 102, 241, 0.2) 0%, rgba(99, 102, 241, 0) 70%)',
+        background: 'radial-gradient(circle, rgba(249, 115, 22, 0.2) 0%, rgba(249, 115, 22, 0) 70%)',
         pointerEvents: 'none'
       }} />
 
@@ -130,12 +130,12 @@ export function LoginPage() {
             width: '52px',
             height: '52px',
             borderRadius: '1rem',
-            background: 'linear-gradient(135deg, #2563eb 0%, #06b6d4 100%)',
+            background: 'linear-gradient(135deg, #ea580c 0%, #f97316 100%)',
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
             color: '#ffffff',
-            boxShadow: '0 8px 20px rgba(37, 99, 235, 0.4)',
+            boxShadow: '0 8px 20px rgba(234, 88, 12, 0.4)',
             marginBottom: '0.75rem'
           }}>
             <MapPin size={28} />
@@ -181,7 +181,7 @@ export function LoginPage() {
               fontSize: '0.825rem',
               fontWeight: 700,
               color: authMode === 'login' ? '#ffffff' : '#94a3b8',
-              backgroundColor: authMode === 'login' ? '#2563eb' : 'transparent',
+              backgroundColor: authMode === 'login' ? '#ea580c' : 'transparent',
               border: 'none',
               borderRadius: '0.5rem',
               cursor: 'pointer',
@@ -190,7 +190,7 @@ export function LoginPage() {
               justifyContent: 'center',
               gap: '0.35rem',
               transition: 'all 0.15s ease',
-              boxShadow: authMode === 'login' ? '0 2px 8px rgba(37, 99, 235, 0.4)' : 'none'
+              boxShadow: authMode === 'login' ? '0 2px 8px rgba(234, 88, 12, 0.4)' : 'none'
             }}
           >
             <LogIn size={15} />
@@ -209,7 +209,7 @@ export function LoginPage() {
               fontSize: '0.825rem',
               fontWeight: 700,
               color: authMode === 'register' ? '#ffffff' : '#94a3b8',
-              backgroundColor: authMode === 'register' ? '#2563eb' : 'transparent',
+              backgroundColor: authMode === 'register' ? '#ea580c' : 'transparent',
               border: 'none',
               borderRadius: '0.5rem',
               cursor: 'pointer',
@@ -218,7 +218,7 @@ export function LoginPage() {
               justifyContent: 'center',
               gap: '0.35rem',
               transition: 'all 0.15s ease',
-              boxShadow: authMode === 'register' ? '0 2px 8px rgba(37, 99, 235, 0.4)' : 'none'
+              boxShadow: authMode === 'register' ? '0 2px 8px rgba(234, 88, 12, 0.4)' : 'none'
             }}
           >
             <UserPlus size={15} />
@@ -382,8 +382,8 @@ export function LoginPage() {
               style={{
                 width: '100%',
                 height: '46px',
-                backgroundColor: '#2563eb',
-                backgroundImage: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                backgroundColor: '#ea580c',
+                backgroundImage: 'linear-gradient(135deg, #ea580c 0%, #c2410c 100%)',
                 color: '#ffffff',
                 border: 'none',
                 borderRadius: '0.625rem',
@@ -394,7 +394,7 @@ export function LoginPage() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '0.5rem',
-                boxShadow: '0 4px 14px rgba(37, 99, 235, 0.4)',
+                boxShadow: '0 4px 14px rgba(234, 88, 12, 0.4)',
                 marginTop: '0.5rem',
                 opacity: loading ? 0.8 : 1
               }}
@@ -408,6 +408,43 @@ export function LoginPage() {
                 </>
               )}
             </button>
+
+            {/* Quick Demo Access Pill */}
+            <div style={{
+              marginTop: '1rem',
+              padding: '0.65rem 0.85rem',
+              backgroundColor: 'rgba(234, 88, 12, 0.12)',
+              border: '1px dashed rgba(249, 115, 22, 0.35)',
+              borderRadius: '0.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '0.5rem',
+              fontSize: '0.78rem'
+            }}>
+              <span style={{ color: '#fed7aa' }}>
+                Demo Login: <strong>admin</strong> / <strong>admin123</strong>
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setUsername('admin');
+                  setPassword('admin123');
+                }}
+                style={{
+                  background: 'rgba(234, 88, 12, 0.25)',
+                  border: '1px solid rgba(249, 115, 22, 0.4)',
+                  color: '#ffedd5',
+                  borderRadius: '0.35rem',
+                  padding: '0.2rem 0.5rem',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                Auto-fill
+              </button>
+            </div>
           </form>
         ) : (
           /* MODE 2: CREATE ADMIN FORM */

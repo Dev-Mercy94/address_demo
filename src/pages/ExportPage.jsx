@@ -615,8 +615,8 @@ export function ExportPage() {
             style={{
               padding: '0.65rem 1.35rem',
               fontSize: '0.95rem',
-              borderColor: '#2563eb',
-              color: '#2563eb',
+              borderColor: '#ea580c',
+              color: '#ea580c',
               fontWeight: 700
             }}
           >

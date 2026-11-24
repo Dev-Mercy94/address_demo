@@ -718,7 +718,7 @@ export function ImportantDatesPage({ onNavigate }) {
             alignItems: 'center',
             justifyContent: 'center',
             color: '#ffffff',
-            boxShadow: '0 4px 14px rgba(99, 102, 241, 0.4)',
+            boxShadow: '0 4px 14px rgba(234, 88, 12, 0.4)',
             flexShrink: 0
           }}>
             <CalendarHeart size={24} />
@@ -745,8 +745,8 @@ export function ImportantDatesPage({ onNavigate }) {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '0.4rem',
-                color: '#2563eb',
-                borderColor: 'rgba(37, 99, 235, 0.3)'
+                color: '#ea580c',
+                borderColor: 'rgba(234, 88, 12, 0.3)'
               }}
               title="Enable Phone & In-App Notification Reminders"
             >
@@ -767,7 +767,7 @@ export function ImportantDatesPage({ onNavigate }) {
               alignItems: 'center',
               justifyContent: 'center',
               gap: '0.45rem',
-              boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)'
+              boxShadow: '0 4px 12px rgba(234, 88, 12, 0.3)'
             }}
           >
             <Plus size={17} />
@@ -785,11 +785,11 @@ export function ImportantDatesPage({ onNavigate }) {
                 width: '28px',
                 height: '28px',
                 borderRadius: '50%',
-                backgroundColor: '#e0f2fe',
+                backgroundColor: '#ffedd5',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: '#0284c7'
+                color: '#ea580c'
               }}>
                 <BellRing size={16} />
               </div>
@@ -896,7 +896,7 @@ export function ImportantDatesPage({ onNavigate }) {
           style={{
             backgroundColor: categoryFilter === 'ALL' ? '#2563eb' : 'transparent',
             color: categoryFilter === 'ALL' ? '#ffffff' : 'var(--text-secondary)',
-            boxShadow: categoryFilter === 'ALL' ? '0 2px 8px rgba(37, 99, 235, 0.3)' : 'none'
+            boxShadow: categoryFilter === 'ALL' ? '0 2px 8px rgba(234, 88, 12, 0.3)' : 'none'
           }}
         >
           <CalendarHeart size={15} />
@@ -1093,7 +1093,7 @@ export function ImportantDatesPage({ onNavigate }) {
                     padding: '3px 8px',
                     borderRadius: '4px',
                     backgroundColor: 'rgba(37, 99, 235, 0.15)',
-                    color: '#2563eb',
+                    color: '#ea580c',
                     fontFamily: 'var(--font-sans)',
                     fontVariantNumeric: 'tabular-nums',
                     fontFeatureSettings: '"zero" 0'
@@ -1126,7 +1126,7 @@ export function ImportantDatesPage({ onNavigate }) {
                         🔔 Tomorrow
                       </span>
                     ) : item.days_until !== undefined && item.days_until <= 7 ? (
-                      <span style={{ backgroundColor: 'rgba(59, 130, 246, 0.12)', color: '#2563eb', fontWeight: 700, fontSize: '0.72rem', padding: '2px 6px', borderRadius: '4px' }}>
+                      <span style={{ backgroundColor: 'rgba(59, 130, 246, 0.12)', color: '#ea580c', fontWeight: 700, fontSize: '0.72rem', padding: '2px 6px', borderRadius: '4px' }}>
                         In {item.days_until}d
                       </span>
                     ) : null}
@@ -1154,7 +1154,7 @@ export function ImportantDatesPage({ onNavigate }) {
                   </div>
 
                   {item.phone && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.82rem', color: '#2563eb', fontWeight: 600, marginBottom: '0.35rem', fontFamily: 'var(--font-mono)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.82rem', color: '#ea580c', fontWeight: 600, marginBottom: '0.35rem', fontFamily: 'var(--font-mono)' }}>
                       <Phone size={13} />
                       <a href={`tel:${item.phone}`} style={{ color: 'inherit', textDecoration: 'none' }}>
                         {item.phone}
@@ -1173,7 +1173,7 @@ export function ImportantDatesPage({ onNavigate }) {
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', justifyContent: 'center' }}>
-                    <Calendar size={13} style={{ color: '#2563eb', flexShrink: 0 }} />
+                    <Calendar size={13} style={{ color: '#ea580c', flexShrink: 0 }} />
                     <span>{item.display_date || item.date}</span>
                   </div>
 
@@ -1190,7 +1190,7 @@ export function ImportantDatesPage({ onNavigate }) {
                     {reminders.includes(0) && <span style={{ fontSize: '0.68rem', padding: '1px 5px', borderRadius: '3px', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)', fontWeight: 600 }}>Today</span>}
                     {reminders.includes(45) && <span style={{ fontSize: '0.68rem', padding: '1px 5px', borderRadius: '3px', backgroundColor: 'rgba(139, 92, 246, 0.12)', color: '#7c3aed', fontWeight: 600 }}>45d</span>}
                     {reminders.includes(30) && <span style={{ fontSize: '0.68rem', padding: '1px 5px', borderRadius: '3px', backgroundColor: 'rgba(99, 102, 241, 0.12)', color: '#4f46e5', fontWeight: 600 }}>30d</span>}
-                    {reminders.includes(7) && <span style={{ fontSize: '0.68rem', padding: '1px 5px', borderRadius: '3px', backgroundColor: 'rgba(37, 99, 235, 0.12)', color: '#2563eb', fontWeight: 600 }}>7d</span>}
+                    {reminders.includes(7) && <span style={{ fontSize: '0.68rem', padding: '1px 5px', borderRadius: '3px', backgroundColor: 'rgba(37, 99, 235, 0.12)', color: '#ea580c', fontWeight: 600 }}>7d</span>}
                     {reminders.filter(r => ![0, 45, 30, 7].includes(r)).map(cust => (
                       <span key={cust} style={{ fontSize: '0.68rem', padding: '1px 5px', borderRadius: '3px', backgroundColor: 'rgba(16, 185, 129, 0.12)', color: '#059669', fontWeight: 600 }}>{cust}d</span>
                     ))}
@@ -1361,7 +1361,7 @@ export function ImportantDatesPage({ onNavigate }) {
                               🔔 Tomorrow
                             </span>
                           ) : item.days_until !== undefined && item.days_until <= 7 ? (
-                            <span style={{ backgroundColor: 'rgba(59, 130, 246, 0.12)', color: '#2563eb', fontWeight: 700, fontSize: '0.72rem', padding: '1px 6px', borderRadius: '4px' }}>
+                            <span style={{ backgroundColor: 'rgba(59, 130, 246, 0.12)', color: '#ea580c', fontWeight: 700, fontSize: '0.72rem', padding: '1px 6px', borderRadius: '4px' }}>
                               In {item.days_until} days
                             </span>
                           ) : null}
@@ -2032,7 +2032,7 @@ export function ImportantDatesPage({ onNavigate }) {
                     border: '1.5px solid #38bdf8'
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.55rem' }}>
-                      <Bell size={16} style={{ color: '#0284c7' }} />
+                      <Bell size={16} style={{ color: '#ea580c' }} />
                       <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-primary)' }}>
                         Phone & In-App Reminders:
                       </span>
@@ -2496,7 +2496,7 @@ export function ImportantDatesPage({ onNavigate }) {
                             border: '1px solid var(--border-color)'
                           }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.45rem' }}>
-                              <Bell size={14} style={{ color: '#0284c7' }} />
+                              <Bell size={14} style={{ color: '#ea580c' }} />
                               <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                                 Reminders:
                               </span>
@@ -2642,7 +2642,7 @@ export function ImportantDatesPage({ onNavigate }) {
                       padding: '0.4rem 0.75rem',
                       fontSize: '0.8rem',
                       fontWeight: 700,
-                      color: '#0284c7',
+                      color: '#ea580c',
                       borderColor: '#38bdf8',
                       backgroundColor: 'rgba(56, 189, 248, 0.08)',
                       display: 'inline-flex',

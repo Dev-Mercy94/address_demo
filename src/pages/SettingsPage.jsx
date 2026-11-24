@@ -91,7 +91,7 @@ export function SettingsPage({ onNavigate }) {
           color: 'var(--text-primary)',
           letterSpacing: '-0.01em'
         }}>
-          <Sparkles size={24} style={{ color: '#2563eb', flexShrink: 0 }} />
+          <Sparkles size={24} style={{ color: '#ea580c', flexShrink: 0 }} />
           <span>System Overview & Modern Feature Suite</span>
         </h2>
         <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.4 }}>
@@ -286,7 +286,7 @@ export function SettingsPage({ onNavigate }) {
           {/* 5. Subscription Management & Dual View Mode */}
           <div style={{
             backgroundColor: 'var(--bg-secondary)',
-            border: '1.5px solid rgba(37, 99, 235, 0.35)',
+            border: '1.5px solid rgba(234, 88, 12, 0.35)',
             borderRadius: '0.75rem',
             padding: '1rem',
             background: 'linear-gradient(135deg, rgba(37, 99, 235, 0.05) 0%, rgba(16, 185, 129, 0.05) 100%)',
@@ -294,7 +294,7 @@ export function SettingsPage({ onNavigate }) {
             flexDirection: 'column'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.9rem', marginBottom: '0.4rem' }}>
-              <CheckSquare size={18} style={{ color: '#2563eb', flexShrink: 0 }} />
+              <CheckSquare size={18} style={{ color: '#ea580c', flexShrink: 0 }} />
               <span>Dual-View Subscription Tracker</span>
             </div>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.45, margin: 0, flex: 1 }}>
@@ -587,7 +587,7 @@ export function SettingsPage({ onNavigate }) {
                   className="overview-footer-contact-link"
                   title="Call Creator: 7871744555"
                 >
-                  <Phone size={13} style={{ color: '#2563eb', flexShrink: 0 }} />
+                  <Phone size={13} style={{ color: '#ea580c', flexShrink: 0 }} />
                   <span>7871744555</span>
                 </a>
               </div>

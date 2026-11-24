@@ -90,8 +90,8 @@ export function DistrictsPage({ onSelectDistrict }) {
                 width: '36px',
                 height: '36px',
                 borderRadius: '0.5rem',
-                backgroundColor: 'rgba(99, 102, 241, 0.15)',
-                color: '#818cf8',
+                backgroundColor: 'rgba(234, 88, 12, 0.15)',
+                color: '#ea580c',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'

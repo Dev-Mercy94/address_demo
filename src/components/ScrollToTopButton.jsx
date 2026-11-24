@@ -46,11 +46,11 @@ export function ScrollToTopButton() {
         width: '48px',
         height: '48px',
         borderRadius: '50%',
-        backgroundColor: '#2563eb',
-        backgroundImage: 'linear-gradient(135deg, #2563eb 0%, #0284c7 100%)',
+        backgroundColor: '#ea580c',
+        backgroundImage: 'linear-gradient(135deg, #ea580c 0%, #f97316 100%)',
         color: '#ffffff',
         border: '2px solid rgba(255, 255, 255, 0.5)',
-        boxShadow: '0 4px 18px rgba(37, 99, 235, 0.5), 0 2px 6px rgba(0, 0, 0, 0.25)',
+        boxShadow: '0 4px 18px rgba(234, 88, 12, 0.5), 0 2px 6px rgba(0, 0, 0, 0.25)',
         cursor: 'pointer',
         display: 'flex',
         alignItems: 'center',
@@ -60,11 +60,11 @@ export function ScrollToTopButton() {
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = 'translateY(-4px) scale(1.08)';
-        e.currentTarget.style.boxShadow = '0 6px 24px rgba(37, 99, 235, 0.65), 0 4px 10px rgba(0, 0, 0, 0.3)';
+        e.currentTarget.style.boxShadow = '0 6px 24px rgba(234, 88, 12, 0.65), 0 4px 10px rgba(0, 0, 0, 0.3)';
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.transform = 'translateY(0) scale(1)';
-        e.currentTarget.style.boxShadow = '0 4px 18px rgba(37, 99, 235, 0.5), 0 2px 6px rgba(0, 0, 0, 0.25)';
+        e.currentTarget.style.boxShadow = '0 4px 18px rgba(234, 88, 12, 0.5), 0 2px 6px rgba(0, 0, 0, 0.25)';
       }}
     >
       <ArrowUp size={22} strokeWidth={2.5} />

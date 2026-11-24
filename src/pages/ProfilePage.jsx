@@ -105,7 +105,7 @@ export function ProfilePage({ onNavigate }) {
             color: 'var(--text-primary)',
             letterSpacing: '-0.01em'
           }}>
-            <IdCard size={22} style={{ color: '#2563eb', flexShrink: 0 }} />
+            <IdCard size={22} style={{ color: '#ea580c', flexShrink: 0 }} />
             <span>Admin Profile & Security</span>
           </h2>
           <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.4 }}>
@@ -149,12 +149,12 @@ export function ProfilePage({ onNavigate }) {
               width: '44px',
               height: '44px',
               borderRadius: '0.75rem',
-              background: 'linear-gradient(135deg, #2563eb 0%, #06b6d4 100%)',
+              background: 'linear-gradient(135deg, #ea580c 0%, #f97316 100%)',
               color: '#ffffff',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 4px 12px rgba(37, 99, 235, 0.35)',
+              boxShadow: '0 4px 12px rgba(234, 88, 12, 0.35)',
               fontWeight: 800,
               fontSize: '1.15rem',
               flexShrink: 0

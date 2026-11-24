@@ -43,14 +43,14 @@ export function AlphabetFilter({ selectedAlphabet, onSelectAlphabet, langMode = 
                 fontSize: '0.8rem',
                 fontWeight: isSelected ? 800 : 600,
                 borderRadius: '0.375rem',
-                border: isSelected ? '1px solid #2563eb' : '1px solid transparent',
-                backgroundColor: isSelected ? '#2563eb' : 'transparent',
+                border: isSelected ? '1px solid #ea580c' : '1px solid transparent',
+                backgroundColor: isSelected ? '#ea580c' : 'transparent',
                 color: isSelected ? '#ffffff' : 'var(--text-primary)',
                 cursor: 'pointer',
                 transition: 'all 0.15s ease'
               }}
               onMouseEnter={(e) => {
-                if (!isSelected) e.currentTarget.style.backgroundColor = '#e0f2fe';
+                if (!isSelected) e.currentTarget.style.backgroundColor = '#fff3ed';
               }}
               onMouseLeave={(e) => {
                 if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent';

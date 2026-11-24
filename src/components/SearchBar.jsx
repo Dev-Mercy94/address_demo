@@ -87,7 +87,7 @@ export function SearchBar({ value, onChange, loading, langMode, onLangModeChange
             pointerEvents: 'none'
           }}>
             {loading ? (
-              <Loader2 size={17} className="pulse-loader" style={{ borderColor: 'rgba(99,102,241,0.3)', borderTopColor: '#6366f1' }} />
+              <Loader2 size={17} className="pulse-loader" style={{ borderColor: 'rgba(234, 88, 12, 0.3)', borderTopColor: '#ea580c' }} />
             ) : (
               <Search size={17} />
             )}
@@ -111,7 +111,7 @@ export function SearchBar({ value, onChange, loading, langMode, onLangModeChange
               color: 'var(--text-primary)',
               fontWeight: 600,
               backgroundColor: 'var(--bg-input)',
-              borderColor: currentMode === 'TA' ? '#2563eb' : undefined,
+              borderColor: currentMode === 'TA' ? '#ea580c' : undefined,
               width: '100%',
               boxSizing: 'border-box'
             }}
@@ -161,7 +161,7 @@ export function SearchBar({ value, onChange, loading, langMode, onLangModeChange
               fontSize: '0.8rem',
               fontWeight: 700,
               color: currentMode === 'EN' ? '#ffffff' : 'var(--text-secondary)',
-              backgroundColor: currentMode === 'EN' ? '#2563eb' : 'transparent',
+              backgroundColor: currentMode === 'EN' ? '#ea580c' : 'transparent',
               border: 'none',
               borderRadius: '0.4rem',
               cursor: 'pointer',
@@ -181,7 +181,7 @@ export function SearchBar({ value, onChange, loading, langMode, onLangModeChange
               fontSize: '0.8rem',
               fontWeight: 700,
               color: currentMode === 'TA' ? '#ffffff' : 'var(--text-secondary)',
-              backgroundColor: currentMode === 'TA' ? '#2563eb' : 'transparent',
+              backgroundColor: currentMode === 'TA' ? '#ea580c' : 'transparent',
               border: 'none',
               borderRadius: '0.4rem',
               cursor: 'pointer',

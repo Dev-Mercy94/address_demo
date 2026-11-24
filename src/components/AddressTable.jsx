@@ -72,7 +72,7 @@ const AddressTableRow = memo(function AddressTableRow({
             width: '18px',
             height: '18px',
             cursor: 'pointer',
-            accentColor: '#2563eb'
+            accentColor: '#ea580c'
           }}
         />
       </td>
@@ -422,8 +422,8 @@ export function AddressTable({
           width: '56px',
           height: '56px',
           borderRadius: '50%',
-          backgroundColor: 'rgba(99, 102, 241, 0.1)',
-          color: '#818cf8',
+          backgroundColor: 'rgba(234, 88, 12, 0.15)',
+          color: '#ea580c',
           display: 'inline-flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -457,7 +457,7 @@ export function AddressTable({
                   width: '18px',
                   height: '18px',
                   cursor: 'pointer',
-                  accentColor: '#2563eb'
+                  accentColor: '#ea580c'
                 }}
               />
             </th>

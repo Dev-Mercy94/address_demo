@@ -110,13 +110,13 @@ export function Header({ activePage, setActivePage, theme, toggleTheme, totalCou
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            borderColor: activePage === 'profile' ? '#2563eb' : undefined,
-            color: activePage === 'profile' ? '#2563eb' : undefined
+            borderColor: activePage === 'profile' ? '#ea580c' : undefined,
+            color: activePage === 'profile' ? '#ea580c' : undefined
           }}
           title="Admin Profile & Security"
           aria-label="Admin Profile"
         >
-          <UserCheck size={16} style={{ color: '#2563eb' }} />
+          <UserCheck size={16} style={{ color: '#ea580c' }} />
         </button>
       </div>
     </header>

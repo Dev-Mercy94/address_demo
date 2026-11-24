@@ -73,7 +73,7 @@ export function Sidebar({ activePage, setActivePage, stats, isMobileMenuOpen, on
             alignItems: 'center',
             justifyContent: 'center',
             color: '#ffffff',
-            boxShadow: '0 4px 12px rgba(99, 102, 241, 0.4)'
+            boxShadow: '0 4px 12px rgba(234, 88, 12, 0.4)'
           }}>
             <MapPin size={22} />
           </div>
@@ -118,8 +118,8 @@ export function Sidebar({ activePage, setActivePage, stats, isMobileMenuOpen, on
                     padding: '0.65rem 0.875rem',
                     borderRadius: '0.5rem',
                     border: 'none',
-                    backgroundColor: isActive ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
-                    color: isActive ? '#818cf8' : 'var(--text-secondary)',
+                    backgroundColor: isActive ? 'rgba(234, 88, 12, 0.15)' : 'transparent',
+                    color: isActive ? '#f97316' : 'var(--text-secondary)',
                     fontWeight: isActive ? 600 : 500,
                     fontSize: '0.875rem',
                     cursor: 'pointer',
@@ -133,7 +133,7 @@ export function Sidebar({ activePage, setActivePage, stats, isMobileMenuOpen, on
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <Icon size={18} style={{ color: isActive ? '#818cf8' : 'var(--text-muted)' }} />
+                    <Icon size={18} style={{ color: isActive ? '#f97316' : 'var(--text-muted)' }} />
                     <span>{item.label}</span>
                   </div>
                   {item.count !== undefined && item.count !== null && (

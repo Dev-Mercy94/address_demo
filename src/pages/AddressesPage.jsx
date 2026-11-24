@@ -419,7 +419,7 @@ export function AddressesPage({ initialParams, onEditAddress, onAddAddress, onSt
               fontSize: '0.85rem',
               fontWeight: 700,
               color: subTabFilter === 'ALL' ? '#ffffff' : 'var(--text-primary)',
-              backgroundColor: subTabFilter === 'ALL' ? '#2563eb' : 'transparent',
+              backgroundColor: subTabFilter === 'ALL' ? '#ea580c' : 'transparent',
               border: 'none',
               borderRadius: '0.45rem',
               cursor: 'pointer',
@@ -584,7 +584,7 @@ export function AddressesPage({ initialParams, onEditAddress, onAddAddress, onSt
             className="btn btn-secondary action-btn-export"
             title="Export Current View as MS Word"
             disabled={!displayedAddresses || displayedAddresses.length === 0}
-            style={{ color: '#2563eb', borderColor: '#2563eb' }}
+            style={{ color: '#ea580c', borderColor: '#ea580c' }}
           >
             <FileText size={16} />
             <span>Export Word</span>
