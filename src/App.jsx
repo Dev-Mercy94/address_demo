@@ -39,7 +39,10 @@ function AuthenticatedApp() {
   const { isAuthenticated } = useAuth();
   const [activePage, setActivePage] = useState('dashboard');
   const [pageHistory, setPageHistory] = useState(['dashboard']);
-  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
+  const [theme, setTheme] = useState(() => {
+    const saved = localStorage.getItem('theme');
+    return saved === 'dark' ? 'dark' : 'light';
+  });
   const [editingAddress, setEditingAddress] = useState(null);
   const [stats, setStats] = useState(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);

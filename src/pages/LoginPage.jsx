@@ -81,7 +81,7 @@ export function LoginPage() {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      background: 'radial-gradient(ellipse at top, #1e293b 0%, #0f172a 100%)',
+      background: 'radial-gradient(ellipse at top, #fff7ed 0%, #fdf8f6 55%, #fed7aa 100%)',
       padding: '1.25rem',
       boxSizing: 'border-box',
       position: 'relative',
@@ -95,7 +95,7 @@ export function LoginPage() {
         width: '450px',
         height: '450px',
         borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(234, 88, 12, 0.25) 0%, rgba(234, 88, 12, 0) 70%)',
+        background: 'radial-gradient(circle, rgba(234, 88, 12, 0.12) 0%, rgba(234, 88, 12, 0) 70%)',
         pointerEvents: 'none'
       }} />
       <div style={{
@@ -105,7 +105,7 @@ export function LoginPage() {
         width: '450px',
         height: '450px',
         borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(249, 115, 22, 0.2) 0%, rgba(249, 115, 22, 0) 70%)',
+        background: 'radial-gradient(circle, rgba(249, 115, 22, 0.08) 0%, rgba(249, 115, 22, 0) 70%)',
         pointerEvents: 'none'
       }} />
 
@@ -113,12 +113,10 @@ export function LoginPage() {
       <div style={{
         width: '100%',
         maxWidth: '440px',
-        backgroundColor: 'rgba(30, 41, 59, 0.85)',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
-        border: '1px solid rgba(255, 255, 255, 0.12)',
+        backgroundColor: '#ffffff',
+        border: '1px solid #fed7aa',
         borderRadius: '1.25rem',
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05)',
+        boxShadow: '0 20px 45px -10px rgba(234, 88, 12, 0.12), 0 4px 16px rgba(0, 0, 0, 0.04)',
         padding: '2.25rem 2rem',
         boxSizing: 'border-box',
         position: 'relative',
@@ -135,7 +133,7 @@ export function LoginPage() {
             alignItems: 'center',
             justifyContent: 'center',
             color: '#ffffff',
-            boxShadow: '0 8px 20px rgba(234, 88, 12, 0.4)',
+            boxShadow: '0 8px 20px rgba(234, 88, 12, 0.35)',
             marginBottom: '0.75rem'
           }}>
             <MapPin size={28} />
@@ -144,7 +142,7 @@ export function LoginPage() {
           <h1 style={{
             fontSize: '1.6rem',
             fontWeight: 800,
-            color: '#ffffff',
+            color: '#1c100c',
             letterSpacing: '-0.025em',
             margin: '0 0 0.25rem 0'
           }}>
@@ -152,7 +150,7 @@ export function LoginPage() {
           </h1>
           <p style={{
             fontSize: '0.85rem',
-            color: '#94a3b8',
+            color: '#78645c',
             margin: 0
           }}>
             {authMode === 'login' ? 'Administrator Authentication Portal' : 'Create Custom Administrator Account'}
@@ -163,8 +161,8 @@ export function LoginPage() {
         <div style={{
           display: 'grid',
           gridTemplateColumns: '1fr 1fr',
-          backgroundColor: 'rgba(15, 23, 42, 0.6)',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
+          backgroundColor: '#fef3eb',
+          border: '1px solid #fed7aa',
           borderRadius: '0.75rem',
           padding: '4px',
           marginBottom: '1.5rem'
@@ -180,7 +178,7 @@ export function LoginPage() {
               padding: '0.5rem',
               fontSize: '0.825rem',
               fontWeight: 700,
-              color: authMode === 'login' ? '#ffffff' : '#94a3b8',
+              color: authMode === 'login' ? '#ffffff' : '#78645c',
               backgroundColor: authMode === 'login' ? '#ea580c' : 'transparent',
               border: 'none',
               borderRadius: '0.5rem',
@@ -190,7 +188,7 @@ export function LoginPage() {
               justifyContent: 'center',
               gap: '0.35rem',
               transition: 'all 0.15s ease',
-              boxShadow: authMode === 'login' ? '0 2px 8px rgba(234, 88, 12, 0.4)' : 'none'
+              boxShadow: authMode === 'login' ? '0 2px 8px rgba(234, 88, 12, 0.35)' : 'none'
             }}
           >
             <LogIn size={15} />
@@ -208,7 +206,7 @@ export function LoginPage() {
               padding: '0.5rem',
               fontSize: '0.825rem',
               fontWeight: 700,
-              color: authMode === 'register' ? '#ffffff' : '#94a3b8',
+              color: authMode === 'register' ? '#ffffff' : '#78645c',
               backgroundColor: authMode === 'register' ? '#ea580c' : 'transparent',
               border: 'none',
               borderRadius: '0.5rem',
@@ -218,7 +216,7 @@ export function LoginPage() {
               justifyContent: 'center',
               gap: '0.35rem',
               transition: 'all 0.15s ease',
-              boxShadow: authMode === 'register' ? '0 2px 8px rgba(234, 88, 12, 0.4)' : 'none'
+              boxShadow: authMode === 'register' ? '0 2px 8px rgba(234, 88, 12, 0.35)' : 'none'
             }}
           >
             <UserPlus size={15} />
@@ -233,16 +231,36 @@ export function LoginPage() {
             alignItems: 'flex-start',
             gap: '0.65rem',
             padding: '0.75rem 1rem',
-            backgroundColor: 'rgba(239, 68, 68, 0.15)',
-            border: '1px solid rgba(239, 68, 68, 0.3)',
+            backgroundColor: '#fef2f2',
+            border: '1px solid #fecaca',
             borderRadius: '0.625rem',
-            color: '#fca5a5',
+            color: '#b91c1c',
             fontSize: '0.84rem',
             marginBottom: '1.25rem',
             lineHeight: 1.4
           }}>
             <AlertCircle size={17} style={{ flexShrink: 0, marginTop: '1px' }} />
             <span>{errorMessage}</span>
+          </div>
+        )}
+
+        {/* Success Alert Box */}
+        {successMessage && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '0.65rem',
+            padding: '0.75rem 1rem',
+            backgroundColor: '#f0fdf4',
+            border: '1px solid #bbf7d0',
+            borderRadius: '0.625rem',
+            color: '#15803d',
+            fontSize: '0.84rem',
+            marginBottom: '1.25rem',
+            lineHeight: 1.4
+          }}>
+            <CheckCircle2 size={17} style={{ flexShrink: 0, marginTop: '1px' }} />
+            <span>{successMessage}</span>
           </div>
         )}
 
@@ -255,7 +273,7 @@ export function LoginPage() {
                 display: 'block',
                 fontSize: '0.8rem',
                 fontWeight: 600,
-                color: '#cbd5e1',
+                color: '#331f18',
                 marginBottom: '0.4rem',
                 letterSpacing: '0.01em'
               }}>
@@ -267,7 +285,7 @@ export function LoginPage() {
                   left: '0.9rem',
                   top: '50%',
                   transform: 'translateY(-50%)',
-                  color: '#64748b',
+                  color: '#ea580c',
                   display: 'flex',
                   alignItems: 'center'
                 }}>
@@ -290,10 +308,10 @@ export function LoginPage() {
                     height: '44px',
                     paddingLeft: '2.6rem',
                     paddingRight: '1rem',
-                    backgroundColor: 'rgba(15, 23, 42, 0.75)',
-                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #fed7aa',
                     borderRadius: '0.625rem',
-                    color: '#ffffff',
+                    color: '#1c100c',
                     fontSize: '0.9rem',
                     fontWeight: 500,
                     outline: 'none',
@@ -309,7 +327,7 @@ export function LoginPage() {
                 display: 'block',
                 fontSize: '0.8rem',
                 fontWeight: 600,
-                color: '#cbd5e1',
+                color: '#331f18',
                 marginBottom: '0.4rem',
                 letterSpacing: '0.01em'
               }}>
@@ -321,7 +339,7 @@ export function LoginPage() {
                   left: '0.9rem',
                   top: '50%',
                   transform: 'translateY(-50%)',
-                  color: '#64748b',
+                  color: '#ea580c',
                   display: 'flex',
                   alignItems: 'center'
                 }}>
@@ -342,10 +360,10 @@ export function LoginPage() {
                     height: '44px',
                     paddingLeft: '2.6rem',
                     paddingRight: '2.75rem',
-                    backgroundColor: 'rgba(15, 23, 42, 0.75)',
-                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #fed7aa',
                     borderRadius: '0.625rem',
-                    color: '#ffffff',
+                    color: '#1c100c',
                     fontSize: '0.9rem',
                     fontWeight: 500,
                     outline: 'none',
@@ -362,7 +380,7 @@ export function LoginPage() {
                     transform: 'translateY(-50%)',
                     background: 'none',
                     border: 'none',
-                    color: '#64748b',
+                    color: '#78645c',
                     cursor: 'pointer',
                     padding: '2px',
                     display: 'flex',
@@ -394,7 +412,7 @@ export function LoginPage() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '0.5rem',
-                boxShadow: '0 4px 14px rgba(234, 88, 12, 0.4)',
+                boxShadow: '0 4px 14px rgba(234, 88, 12, 0.35)',
                 marginTop: '0.5rem',
                 opacity: loading ? 0.8 : 1
               }}
@@ -413,8 +431,8 @@ export function LoginPage() {
             <div style={{
               marginTop: '1rem',
               padding: '0.65rem 0.85rem',
-              backgroundColor: 'rgba(234, 88, 12, 0.12)',
-              border: '1px dashed rgba(249, 115, 22, 0.35)',
+              backgroundColor: '#fff7ed',
+              border: '1px dashed #ea580c',
               borderRadius: '0.5rem',
               display: 'flex',
               alignItems: 'center',
@@ -422,7 +440,7 @@ export function LoginPage() {
               gap: '0.5rem',
               fontSize: '0.78rem'
             }}>
-              <span style={{ color: '#fed7aa' }}>
+              <span style={{ color: '#9a3412', fontWeight: 600 }}>
                 Demo Login: <strong>admin</strong> / <strong>admin123</strong>
               </span>
               <button
@@ -432,14 +450,15 @@ export function LoginPage() {
                   setPassword('admin123');
                 }}
                 style={{
-                  background: 'rgba(234, 88, 12, 0.25)',
-                  border: '1px solid rgba(249, 115, 22, 0.4)',
-                  color: '#ffedd5',
+                  background: '#ea580c',
+                  border: 'none',
+                  color: '#ffffff',
                   borderRadius: '0.35rem',
-                  padding: '0.2rem 0.5rem',
+                  padding: '0.25rem 0.6rem',
                   fontSize: '0.72rem',
                   fontWeight: 700,
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 6px rgba(234, 88, 12, 0.25)'
                 }}
               >
                 Auto-fill
@@ -455,7 +474,7 @@ export function LoginPage() {
                 display: 'block',
                 fontSize: '0.8rem',
                 fontWeight: 600,
-                color: '#cbd5e1',
+                color: '#331f18',
                 marginBottom: '0.35rem'
               }}>
                 Administrator Name
@@ -469,10 +488,10 @@ export function LoginPage() {
                   width: '100%',
                   height: '42px',
                   padding: '0 0.9rem',
-                  backgroundColor: 'rgba(15, 23, 42, 0.75)',
-                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #fed7aa',
                   borderRadius: '0.625rem',
-                  color: '#ffffff',
+                  color: '#1c100c',
                   fontSize: '0.9rem',
                   outline: 'none',
                   boxSizing: 'border-box'
@@ -486,7 +505,7 @@ export function LoginPage() {
                 display: 'block',
                 fontSize: '0.8rem',
                 fontWeight: 600,
-                color: '#cbd5e1',
+                color: '#331f18',
                 marginBottom: '0.35rem'
               }}>
                 Username *
@@ -501,10 +520,10 @@ export function LoginPage() {
                   width: '100%',
                   height: '42px',
                   padding: '0 0.9rem',
-                  backgroundColor: 'rgba(15, 23, 42, 0.75)',
-                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #fed7aa',
                   borderRadius: '0.625rem',
-                  color: '#ffffff',
+                  color: '#1c100c',
                   fontSize: '0.9rem',
                   outline: 'none',
                   boxSizing: 'border-box'
@@ -518,7 +537,7 @@ export function LoginPage() {
                 display: 'block',
                 fontSize: '0.8rem',
                 fontWeight: 600,
-                color: '#cbd5e1',
+                color: '#331f18',
                 marginBottom: '0.35rem'
               }}>
                 Password * (min 4 characters)
@@ -534,10 +553,10 @@ export function LoginPage() {
                     width: '100%',
                     height: '42px',
                     padding: '0 2.5rem 0 0.9rem',
-                    backgroundColor: 'rgba(15, 23, 42, 0.75)',
-                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #fed7aa',
                     borderRadius: '0.625rem',
-                    color: '#ffffff',
+                    color: '#1c100c',
                     fontSize: '0.9rem',
                     outline: 'none',
                     boxSizing: 'border-box'
@@ -553,7 +572,7 @@ export function LoginPage() {
                     transform: 'translateY(-50%)',
                     background: 'none',
                     border: 'none',
-                    color: '#64748b',
+                    color: '#78645c',
                     cursor: 'pointer',
                     padding: '2px',
                     display: 'flex',
@@ -571,7 +590,7 @@ export function LoginPage() {
                 display: 'block',
                 fontSize: '0.8rem',
                 fontWeight: 600,
-                color: '#cbd5e1',
+                color: '#331f18',
                 marginBottom: '0.35rem'
               }}>
                 Confirm Password *
@@ -586,10 +605,10 @@ export function LoginPage() {
                   width: '100%',
                   height: '42px',
                   padding: '0 0.9rem',
-                  backgroundColor: 'rgba(15, 23, 42, 0.75)',
-                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #fed7aa',
                   borderRadius: '0.625rem',
-                  color: '#ffffff',
+                  color: '#1c100c',
                   fontSize: '0.9rem',
                   outline: 'none',
                   boxSizing: 'border-box'
@@ -616,7 +635,7 @@ export function LoginPage() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '0.5rem',
-                boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4)',
+                boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
                 marginTop: '0.4rem',
                 opacity: loading ? 0.8 : 1
               }}

@@ -30,6 +30,8 @@ export function AuthProvider({ children }) {
         setToken(res.token || res.user.token);
         localStorage.setItem('address_auth_user', JSON.stringify(res.user));
         localStorage.setItem('address_auth_token', res.token || res.user.token);
+        localStorage.setItem('theme', 'light');
+        document.documentElement.setAttribute('data-theme', 'light');
         return { success: true, user: res.user };
       } else {
         throw new Error(res.error || 'Authentication response failed');
@@ -53,6 +55,8 @@ export function AuthProvider({ children }) {
         setToken(res.token || res.user.token);
         localStorage.setItem('address_auth_user', JSON.stringify(res.user));
         localStorage.setItem('address_auth_token', res.token || res.user.token);
+        localStorage.setItem('theme', 'light');
+        document.documentElement.setAttribute('data-theme', 'light');
         return { success: true, user: res.user };
       } else {
         throw new Error(res.error || 'Registration response failed');
@@ -87,6 +91,8 @@ export function AuthProvider({ children }) {
     setToken(null);
     localStorage.removeItem('address_auth_user');
     localStorage.removeItem('address_auth_token');
+    localStorage.setItem('theme', 'light');
+    document.documentElement.setAttribute('data-theme', 'light');
   };
 
   const isAuthenticated = Boolean(user && token);
